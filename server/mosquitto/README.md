@@ -17,8 +17,11 @@ sudo cp /etc/letsencrypt/live/garaje.thinc.site/fullchain.pem certs/
 sudo cp /etc/letsencrypt/live/garaje.thinc.site/privkey.pem certs/
 sudo chmod 644 certs/privkey.pem
 
-# 2) Usuario del ESP8266 (te pide una clave; guardala)
-sudo docker run --rm --entrypoint mosquitto_passwd -v "$(pwd)":/cfg eclipse-mosquitto:2 -c -b /cfg/garaje.passwd esp8266 'TU_CLAVE'
+# 2) Usuarios (ambos listeners exigen autenticacion)
+#    - esp8266: lo usa el firmware
+#    - garaje-server: lo usa el servidor Node (credenciales en el .env)
+sudo docker run --rm --entrypoint mosquitto_passwd -v "$(pwd)":/cfg eclipse-mosquitto:2 -c -b /cfg/garaje.passwd esp8266 'TU_CLAVE_ESP8266'
+sudo docker run --rm --entrypoint mosquitto_passwd -v "$(pwd)":/cfg eclipse-mosquitto:2 -b /cfg/garaje.passwd garaje-server 'TU_CLAVE_SERVIDOR'
 # El contenedor corre como mosquitto (uid 1883): dejarle el archivo como suyo
 sudo chown 1883:1883 garaje.passwd
 sudo chmod 600 garaje.passwd
@@ -38,11 +41,11 @@ sudo docker ps | grep garage_mosquitto
 ## Verificacion rapida
 
 ```bash
-# Local (sin TLS)
-mosquitto_pub -h 127.0.0.1 -p 1884 -t 'garaje/test' -m 'ok'
+# Local (con credenciales del servidor)
+mosquitto_pub -h 127.0.0.1 -p 1884 -u garaje-server -P TU_CLAVE_SERVIDOR -t 'garaje/test' -m 'ok'
 
 # Publico con TLS y credenciales (desde tu PC con el cert)
-mosquitto_pub --cafile fullchain.pem -h garaje.thinc.site -p 8883 -u esp8266 -P TU_CLAVE -t 'garaje/test' -m 'ok'
+mosquitto_pub --cafile fullchain.pem -h garaje.thinc.site -p 8883 -u esp8266 -P TU_CLAVE_ESP8266 -t 'garaje/test' -m 'ok'
 ```
 
 > Nota: `certs/` es una copia del certificado de certbot. Despues de renovar
