@@ -30,7 +30,9 @@ const char* MQTT_PREFIX = "garaje";
 #define USE_TLS 1   // 1 = conexion cifrada (recomendado), 0 = sin cifrar
 #define DEVICE_NAME "esp8266-garaje"
 
-const uint8_t RELAY_PINS[4] = { D1, D2, D5, D6 };
+// Pines GPIO (valores numericos: no dependen de la variante de placa).
+// En NodeMCU/Wemos D1 mini equivalen a: D1=GPIO5, D2=GPIO4, D5=GPIO14, D6=GPIO12
+const uint8_t RELAY_PINS[4] = { 5, 4, 14, 12 };
 const uint8_t RELAY_ACTIVE = LOW; // LOW = modulo optoacoplado, HIGH = otros
 
 const unsigned long PULSE_MS = 1000;      // duracion del pulso (ms)
