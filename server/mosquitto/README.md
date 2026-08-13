@@ -19,6 +19,7 @@ sudo chmod 644 certs/privkey.pem
 
 # 2) Usuario del ESP8266 (te pide una clave; guardala)
 sudo docker run --rm --entrypoint mosquitto_passwd -v "$(pwd)":/cfg eclipse-mosquitto:2 -c -b /cfg/garaje.passwd esp8266 'TU_CLAVE'
+sudo chmod 644 garaje.passwd
 
 # 3) Levantar el contenedor
 sudo docker compose -f docker-compose.garaje.yml up -d
