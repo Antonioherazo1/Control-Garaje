@@ -11,7 +11,7 @@ module.exports = {
   minPulseGapMs: parseInt(process.env.MIN_PULSE_GAP_MS || '1500', 10),
   maxHistory: parseInt(process.env.MAX_HISTORY || '2000', 10),
   mqtt: {
-    url: process.env.MQTT_URL || 'mqtt://127.0.0.1:1883',
+    url: process.env.MQTT_URL || 'mqtt://127.0.0.1:1884',
     username: process.env.MQTT_USERNAME || '',
     password: process.env.MQTT_PASSWORD || '',
     prefix: (process.env.MQTT_PREFIX || 'garaje').replace(/\/+$/, ''),

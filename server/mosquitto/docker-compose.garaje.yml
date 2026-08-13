@@ -1,0 +1,31 @@
+# Broker Mosquitto del garaje (contenedor aislado de Iot Energy)
+# Uso en la EC2:
+#   cd server/mosquitto
+#   sudo mkdir -p certs
+#   sudo cp /etc/letsencrypt/live/garaje.thinc.site/fullchain.pem certs/
+#   sudo cp /etc/letsencrypt/live/garaje.thinc.site/privkey.pem certs/
+#   sudo chmod 644 certs/privkey.pem
+#   sudo docker run --rm --entrypoint mosquitto_passwd -v "$(pwd)":/cfg eclipse-mosquitto:2 -c -b /cfg/garaje.passwd esp8266 'TU_CLAVE'
+#   sudo docker compose -f docker-compose.garaje.yml up -d
+#
+# Puertos:
+#   1884 (127.0.0.1) -> servidor Node local
+#   8883 (publico)   -> ESP8266 con TLS
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: garage_mosquitto
+    restart: unless-stopped
+    ports:
+      - "1884:1884"
+      - "8883:8883"
+    volumes:
+      - ./garaje.conf:/mosquitto/config/mosquitto.conf
+      - ./garaje.passwd:/mosquitto/config/garaje.passwd
+      - ./certs:/mosquitto/certs:ro
+      - garage_data:/mosquitto/data
+      - garage_log:/mosquitto/log
+
+volumes:
+  garage_data:
+  garage_log:

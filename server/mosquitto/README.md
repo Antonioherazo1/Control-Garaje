@@ -1,62 +1,79 @@
-# Broker MQTT (Mosquitto)
+# Broker MQTT del garaje (Mosquitto en Docker)
 
-## Instalacion en la EC2 (Debian/Ubuntu)
+Broker **separado e aislado** del que usa Iot Energy (`energy_iot_mosquitto`,
+que es anonimo y sin TLS, por eso NO se usa para el garaje).
+
+## Levantarlo en la EC2
+
+Requisito previo: el certificado Let's Encrypt de `garaje.thinc.site`
+(ver `deploy/README.md`, pasos 1-2).
 
 ```bash
-sudo apt update && sudo apt install -y mosquitto mosquitto-clients
+cd /opt/Control-Garaje/server/mosquitto
 
-# Copia la config
-sudo cp GarageControl/server/mosquitto/garaje.conf /etc/mosquitto/conf.d/garaje.conf
+# 1) Certificados (se copian de los de certbot)
+sudo mkdir -p certs
+sudo cp /etc/letsencrypt/live/garaje.thinc.site/fullchain.pem certs/
+sudo cp /etc/letsencrypt/live/garaje.thinc.site/privkey.pem certs/
+sudo chmod 644 certs/privkey.pem
 
-# Crea el archivo de passwords (un usuario para el ESP8266)
-sudo mosquitto_passwd -c /etc/mosquitto/garaje.passwd esp8266
-# Te pedira una clave; guardala para el firmware.
+# 2) Usuario del ESP8266 (te pide una clave; guardala)
+sudo docker run --rm --entrypoint mosquitto_passwd -v "$(pwd)":/cfg eclipse-mosquitto:2 -c -b /cfg/garaje.passwd esp8266 'TU_CLAVE'
 
-sudo systemctl restart mosquitto
-sudo systemctl enable mosquitto
+# 3) Levantar el contenedor
+sudo docker compose -f docker-compose.garaje.yml up -d
+sudo docker ps | grep garage_mosquitto
 ```
 
-> Requiere el certificado Let's Encrypt de `garaje.thinc.site` en
-> `/etc/letsencrypt/live/garaje.thinc.site/`. Ver `deploy/README.md`.
+## Puertos
+
+| Puerto | Exposicion      | Uso                          |
+|--------|-----------------|------------------------------|
+| 1884   | 127.0.0.1 (local) | Servidor Node (`MQTT_URL=mqtt://127.0.0.1:1884`) |
+| 8883   | Publico (TLS)   | ESP8266 (`garaje.thinc.site:8883`) |
 
 ## Verificacion rapida
 
 ```bash
-# En la EC2
-mosquitto_sub -h 127.0.0.1 -t 'garaje/#' -v
+# Local (sin TLS)
+mosquitto_pub -h 127.0.0.1 -p 1884 -t 'garaje/test' -m 'ok'
 
-# Desde tu PC (remplaza <clave>):
-mosquitto_pub -h garaje.thinc.site -p 8883 --cafile /etc/letsencrypt/live/garaje.thinc.site/fullchain.pem -u esp8266 -P <clave> -t 'garaje/door/1/cmd' -m 'open'
+# Publico con TLS y credenciales (desde tu PC con el cert)
+mosquitto_pub --cafile fullchain.pem -h garaje.thinc.site -p 8883 -u esp8266 -P TU_CLAVE -t 'garaje/test' -m 'ok'
 ```
 
-## Topics usados
+> Nota: `certs/` es una copia del certificado de certbot. Despues de renovar
+> el certificado, vuelve a copiar ambos archivos y reinicia el contenedor.
 
-| Topic                      | Direccion         | Payload                          |
-|----------------------------|-------------------|----------------------------------|
-| `garaje/door/1/cmd`        | server -> ESP8266 | `open` o `close`                 |
-| `garaje/door/2/cmd`        | server -> ESP8266 | `open` o `close`                 |
-| `garaje/emergency/cmd`     | server -> ESP8266 | `stop` o `reset`                 |
-| `garaje/device/status`     | ESP8266 -> server | JSON (retained) / `offline` (LWT)|
-| `garaje/door/<n>/state`    | ESP8266 -> server | `open`, `closed`, `unknown`      |
+## Renovacion del certificado (recordatorio)
 
-## Seguridad recomendada (opcional)
+```bash
+sudo certbot renew
+cd /opt/Control-Garaje/server/mosquitto
+sudo cp /etc/letsencrypt/live/garaje.thinc.site/fullchain.pem certs/
+sudo cp /etc/letsencrypt/live/garaje.thinc.site/privkey.pem certs/
+sudo chmod 644 certs/privkey.pem
+sudo docker compose -f docker-compose.garaje.yml restart
+```
 
-Si quieres que solo el ESP8266 pueda publicar estados y el server solo comandos,
-anade ACL:
+## Seguridad adicional (opcional)
+
+Para que el ESP8266 solo pueda publicar estados y el server solo comandos,
+agrega ACL al broker. En `garaje.conf`:
 
 ```ini
-# /etc/mosquitto/conf.d/garaje-acl.conf
-acl_file /etc/mosquitto/garaje.acl
+acl_file /mosquitto/config/garaje.acl
 ```
 
 ```text
-# /etc/mosquitto/garaje.acl
+# garaje.acl
 user esp8266
 topic write garaje/door/1/state
 topic write garaje/door/2/state
 topic write garaje/device/status
 topic read garaje/door/1/cmd
 topic read garaje/door/2/cmd
+topic read garaje/emergency/cmd
 topic read garaje/emergency/cmd
 
 user garaje-server
@@ -69,5 +86,6 @@ topic read garaje/door/2/state
 topic read garaje/emergency/cmd
 ```
 
-Si usas ACL, crea tambien el usuario del servidor con `mosquitto_passwd`
-y ponlo en el `.env` del servidor (`MQTT_USERNAME` / `MQTT_PASSWORD`).
+Si usas ACL, crea tambien el usuario `garaje-server` con `mosquitto_passwd`
+y pon sus credenciales en el `.env` del servidor
+(`MQTT_USERNAME` / `MQTT_PASSWORD`).

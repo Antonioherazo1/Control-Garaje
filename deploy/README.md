@@ -47,15 +47,30 @@ sudo nano .env
 #   ADMIN_INITIAL_PIN=1234   <- se usa solo la 1a vez, cambialo despues
 ```
 
-## 4. Broker Mosquitto
+## 4. Broker Mosquitto (contenedor aislado)
+
+La EC2 ya tiene un broker para Iot Energy, pero es anonimo y sin TLS, por lo
+que el garaje usa un contenedor Mosquitto separado (1884 local + 8883 TLS).
 
 ```bash
-sudo apt install -y mosquitto mosquitto-clients
-sudo cp /opt/garage-control/server/mosquitto/garaje.conf /etc/mosquitto/conf.d/garaje.conf
-sudo mosquitto_passwd -c /etc/mosquitto/garaje.passwd esp8266
-sudo systemctl restart mosquitto
-sudo systemctl enable mosquitto
+cd /opt/Control-Garaje/server/mosquitto
+
+# Certificados (se copian de los de certbot)
+sudo mkdir -p certs
+sudo cp /etc/letsencrypt/live/garaje.thinc.site/fullchain.pem certs/
+sudo cp /etc/letsencrypt/live/garaje.thinc.site/privkey.pem certs/
+sudo chmod 644 certs/privkey.pem
+
+# Usuario del ESP8266 (te pedira una clave; guardala)
+sudo docker run --rm --entrypoint mosquitto_passwd -v "$(pwd)":/cfg eclipse-mosquitto:2 -c -b /cfg/garaje.passwd esp8266 'TU_CLAVE'
+
+# Levantar el contenedor
+sudo docker compose -f docker-compose.garaje.yml up -d
+sudo docker ps | grep garage_mosquitto
 ```
+
+En el `.env` del servidor queda `MQTT_URL=mqtt://127.0.0.1:1884`
+(valor por defecto). Abre el puerto **8883** en el Security Group.
 
 ## 5. Servicio systemd
 
