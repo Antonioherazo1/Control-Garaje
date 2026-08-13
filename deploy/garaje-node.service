@@ -1,0 +1,22 @@
+# GarageControl - servicio systemd para el servidor Node
+# Copia a /etc/systemd/system/garaje-node.service
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now garaje-node
+
+[Unit]
+Description=Garage Control Node Server
+After=network.target mosquitto.service
+Wants=mosquitto.service
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/opt/garage-control/server
+ExecStart=/usr/bin/node src/index.js
+Restart=always
+RestartSec=5
+Environment=NODE_ENV=production
+EnvironmentFile=/opt/garage-control/server/.env
+
+[Install]
+WantedBy=multi-user.target
