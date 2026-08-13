@@ -11,12 +11,12 @@ Wants=mosquitto.service
 [Service]
 Type=simple
 User=www-data
-WorkingDirectory=/opt/garage-control/server
+WorkingDirectory=/opt/Control-Garaje/server
 ExecStart=/usr/bin/node src/index.js
 Restart=always
 RestartSec=5
 Environment=NODE_ENV=production
-EnvironmentFile=/opt/garage-control/server/.env
+EnvironmentFile=/opt/Control-Garaje/server/.env
 
 [Install]
 WantedBy=multi-user.target
