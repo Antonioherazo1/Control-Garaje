@@ -153,8 +153,8 @@ function doorStateLabel(st) {
 function renderDoors() {
   const cont = $('doors');
   const doors = [
-    { id: 'door1', label: 'Porton 1' },
-    { id: 'door2', label: 'Porton 2' },
+    { id: 'door1', label: 'Portón Abatible' },
+    { id: 'door2', label: 'Reja Corrediza' },
   ];
   const allowed = state.user && state.user.role === 'admin'
     ? doors
@@ -237,7 +237,7 @@ function renderHistory(events) {
   const rows = events.map((ev) => {
     const when = new Date(ev.ts).toLocaleString();
     const action = { open: 'Abrir', close: 'Cerrar', login: 'Login', emergency: 'Emergencia', emergency_reset: 'Restablecer' }[ev.action] || ev.action;
-    const what = ev.door ? ({ door1: 'Porton 1', door2: 'Porton 2' }[ev.door] || ev.door) + ' ' + action : action;
+    const what = ev.door ? ({ door1: 'Portón Abatible', door2: 'Reja Corrediza' }[ev.door] || ev.door) + ' ' + action : action;
     const cls = ev.result === 'ok' ? 'badge-ok' : ev.result === 'denied' ? 'badge-denied' : 'badge-error';
     return '<tr><td>' + when + '</td><td>' + escapeHtml(ev.user) + '</td><td>' + escapeHtml(what) + '</td><td class="' + cls + '">' + escapeHtml(ev.result) + '</td></tr>';
   }).join('');
@@ -269,7 +269,7 @@ function renderUsers(users) {
   users.forEach((u) => {
     const item = document.createElement('div');
     item.className = 'user-item';
-    const doors = (u.doors || []).map((d) => ({ door1: 'P1', door2: 'P2' }[d] || d)).join(', ');
+    const doors = (u.doors || []).map((d) => ({ door1: 'Abatible', door2: 'Reja' }[d] || d)).join(', ');
     const sched = u.schedule ? u.schedule.start + ' - ' + u.schedule.end : '24/7';
     const limit = u.dailyLimit > 0 ? 'max ' + u.dailyLimit + '/dia' : 'sin limite';
     const extra = u.temp ? ' · TEMPORAL' : '';
@@ -294,6 +294,35 @@ function renderUsers(users) {
     });
   });
 }
+
+$('user-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const result = $('user-result');
+  result.classList.add('hidden');
+  const doors = Array.from(document.querySelectorAll('#user-form input[type="checkbox"]:checked')).map((c) => c.value);
+  try {
+    await api('/users', {
+      method: 'POST',
+      body: JSON.stringify({
+        id: $('user-id').value.trim().toLowerCase(),
+        name: $('user-name').value.trim(),
+        pin: $('user-pin').value.trim(),
+        doors,
+        schedule: { start: $('user-start').value || '00:00', end: $('user-end').value || '23:59' },
+        dailyLimit: parseInt($('user-limit').value || '0', 10),
+      }),
+    });
+    result.textContent = 'Usuario creado: ' + $('user-name').value.trim();
+    result.classList.remove('hidden');
+    $('user-form').reset();
+    $('user-start').value = '00:00';
+    $('user-end').value = '23:59';
+    $('user-limit').value = '0';
+    loadUsers();
+  } catch (err) {
+    alert(tr(err.message));
+  }
+});
 
 $('temp-form').addEventListener('submit', async (e) => {
   e.preventDefault();

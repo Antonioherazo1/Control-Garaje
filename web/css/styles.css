@@ -221,8 +221,8 @@ header {
 /* ---------- Puertas ---------- */
 .doors {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  grid-template-columns: 1fr;
+  gap: 14px;
   margin-bottom: 16px;
 }
 
@@ -230,17 +230,18 @@ header {
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 16px;
+  padding: 22px 18px;
+  width: 100%;
 }
 
 .door h3 {
-  margin: 0 0 4px;
+  margin: 0 0 6px;
   color: var(--text);
-  font-size: 1rem;
+  font-size: 1.25rem;
 }
 
 .door-state {
-  margin: 0 0 12px;
+  margin: 0 0 16px;
 }
 
 .door-state[data-state="open"] {
@@ -253,7 +254,7 @@ header {
 
 .btn-row {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   flex-wrap: wrap;
 }
 
@@ -261,10 +262,10 @@ header {
   flex: 1;
 }
 
-@media (max-width: 420px) {
-  .doors {
-    grid-template-columns: 1fr;
-  }
+button.cmd {
+  padding: 22px 12px;
+  font-size: 1.35rem;
+  border-radius: 14px;
 }
 
 /* ---------- Paneles ---------- */
