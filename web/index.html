@@ -38,20 +38,8 @@
       </div>
     </header>
 
-    <div id="emergency-banner" class="emergency-banner hidden">
-      SISTEMA BLOQUEADO POR EMERGENCIA
-    </div>
-
     <main>
       <div id="doors" class="doors"></div>
-
-      <section class="panel">
-        <h2>Emergencia</h2>
-        <div class="btn-row">
-          <button id="btn-emergency" class="danger">PARADA DE EMERGENCIA</button>
-          <button id="btn-emergency-reset" class="ghost hidden">Restablecer sistema</button>
-        </div>
-      </section>
 
       <section class="panel">
         <h2>Historial
@@ -62,6 +50,9 @@
 
       <section id="panel-admin" class="panel hidden">
         <h2>Administracion</h2>
+        <div class="btn-row">
+          <button id="btn-test" class="ghost">Prueba del dispositivo</button>
+        </div>
         <h3>Usuarios</h3>
         <div id="users-list"></div>
 

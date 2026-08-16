@@ -78,7 +78,7 @@ app.get('/api/status', auth.authRequired, (req, res) => {
 app.post('/api/command', auth.authRequired, (req, res) => {
   const { door, action } = req.body || {};
   if (!DOORS[door]) return res.status(400).json({ error: 'puerta_invalida' });
-  if (!['open', 'close'].includes(action)) return res.status(400).json({ error: 'accion_invalida' });
+  if (!['open', 'close', 'toggle'].includes(action)) return res.status(400).json({ error: 'accion_invalida' });
 
   const u = db.getUser(req.userId);
   if (!u) return res.status(401).json({ error: 'usuario_no_existe' });
@@ -112,6 +112,22 @@ app.post('/api/command', auth.authRequired, (req, res) => {
   db.recordUsage(u.id);
   mqtt.cmdDoor(DOORS[door].channel, action);
   db.addHistory({ ts: now, user: u.id, door, action, result: 'ok' });
+  res.json({ ok: true });
+});
+
+app.post('/api/test', auth.authRequired, auth.adminRequired, (req, res) => {
+  const u = db.getUser(req.userId);
+  if (!u) return res.status(401).json({ error: 'usuario_no_existe' });
+  if (!mqtt.connected) {
+    db.addHistory({ ts: Date.now(), user: u.id, door: null, action: 'test', result: 'error', reason: 'broker_offline' });
+    return res.status(503).json({ error: 'broker_offline' });
+  }
+  if (!mqtt.deviceOnline) {
+    db.addHistory({ ts: Date.now(), user: u.id, door: null, action: 'test', result: 'error', reason: 'dispositivo_offline' });
+    return res.status(503).json({ error: 'dispositivo_offline' });
+  }
+  mqtt.testPulse();
+  db.addHistory({ ts: Date.now(), user: u.id, door: null, action: 'test', result: 'ok' });
   res.json({ ok: true });
 });
 

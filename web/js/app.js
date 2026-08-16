@@ -139,8 +139,6 @@ function renderStatus() {
     device.className = 'pill offline';
     device.textContent = s.broker ? 'Dispositivo: sin conexion' : 'Dispositivo: —';
   }
-  $('emergency-banner').classList.toggle('hidden', !s.emergency);
-  $('btn-emergency-reset').classList.toggle('hidden', !s.emergency);
   renderDoors();
 }
 
@@ -169,8 +167,7 @@ function renderDoors() {
       '<h3>' + d.label + '</h3>' +
       '<p class="muted door-state" data-state="' + st + '">Estado: ' + doorStateLabel(st) + '</p>' +
       '<div class="btn-row">' +
-      '  <button class="cmd" data-door="' + d.id + '" data-action="open">Abrir</button>' +
-      '  <button class="cmd" data-door="' + d.id + '" data-action="close">Cerrar</button>' +
+      '  <button class="cmd" data-door="' + d.id + '" data-action="toggle">Accionar</button>' +
       '</div>';
     cont.appendChild(card);
   });
@@ -195,25 +192,19 @@ async function onCommand(e) {
   }
 }
 
-/* ---------------- Emergencia ---------------- */
+/* ---------------- Prueba del dispositivo ---------------- */
 
-$('btn-emergency').addEventListener('click', async () => {
-  if (!confirm('¿Detener ambos motores ahora?')) return;
+$('btn-test').addEventListener('click', async () => {
+  const btn = $('btn-test');
+  btn.disabled = true;
   try {
-    await api('/emergency', { method: 'POST', body: JSON.stringify({ action: 'stop' }) });
-    await refreshStatus();
-    alert('Parada de emergencia activada. El sistema queda bloqueado.');
+    await api('/test', { method: 'POST' });
+    alert('Pulso de prueba enviado (LED + salida D6).');
   } catch (err) {
     alert(tr(err.message));
-  }
-});
-
-$('btn-emergency-reset').addEventListener('click', async () => {
-  try {
-    await api('/emergency', { method: 'POST', body: JSON.stringify({ action: 'reset' }) });
-    await refreshStatus();
-  } catch (err) {
-    alert(tr(err.message));
+  } finally {
+    setTimeout(() => { btn.disabled = false; }, 1200);
+    loadHistory();
   }
 });
 
@@ -236,7 +227,7 @@ function renderHistory(events) {
   }
   const rows = events.map((ev) => {
     const when = new Date(ev.ts).toLocaleString();
-    const action = { open: 'Abrir', close: 'Cerrar', login: 'Login', emergency: 'Emergencia', emergency_reset: 'Restablecer' }[ev.action] || ev.action;
+    const action = { toggle: 'Accionar', open: 'Abrir', close: 'Cerrar', test: 'Prueba', login: 'Login', emergency: 'Emergencia', emergency_reset: 'Restablecer' }[ev.action] || ev.action;
     const what = ev.door ? ({ door1: 'Portón Abatible', door2: 'Reja Corrediza' }[ev.door] || ev.door) + ' ' + action : action;
     const cls = ev.result === 'ok' ? 'badge-ok' : ev.result === 'denied' ? 'badge-denied' : 'badge-error';
     return '<tr><td>' + when + '</td><td>' + escapeHtml(ev.user) + '</td><td>' + escapeHtml(what) + '</td><td class="' + cls + '">' + escapeHtml(ev.result) + '</td></tr>';

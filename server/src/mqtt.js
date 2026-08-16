@@ -7,6 +7,7 @@ const TOPICS = {
   doorCmd: (n) => `${P()}/door/${n}/cmd`,
   doorState: (n) => `${P()}/door/${n}/state`,
   emergencyCmd: `${P()}/emergency/cmd`,
+  testCmd: `${P()}/test/cmd`,
 };
 
 class MqttHub {
@@ -91,6 +92,10 @@ class MqttHub {
 
   cmdDoor(channel, action) {
     return this.publish(TOPICS.doorCmd(channel), action);
+  }
+
+  testPulse() {
+    return this.publish(TOPICS.testCmd, 'ping');
   }
 
   emergency(action) {
