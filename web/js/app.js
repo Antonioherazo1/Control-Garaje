@@ -187,7 +187,7 @@ async function onCommand(e) {
   } catch (err) {
     alert(tr(err.message));
   } finally {
-    setTimeout(() => { btn.disabled = false; }, 1200);
+    setTimeout(() => { btn.disabled = false; }, 600);
     loadHistory();
   }
 }
@@ -203,7 +203,7 @@ $('btn-test').addEventListener('click', async () => {
   } catch (err) {
     alert(tr(err.message));
   } finally {
-    setTimeout(() => { btn.disabled = false; }, 1200);
+    setTimeout(() => { btn.disabled = false; }, 600);
     loadHistory();
   }
 });

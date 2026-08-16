@@ -8,7 +8,7 @@ module.exports = {
   jwtSecret: process.env.JWT_SECRET || 'cambia-esta-clave-por-seguridad',
   jwtExpires: process.env.JWT_EXPIRES || '8h',
   adminInitialPin: process.env.ADMIN_INITIAL_PIN || '1234',
-  minPulseGapMs: parseInt(process.env.MIN_PULSE_GAP_MS || '1500', 10),
+  minPulseGapMs: parseInt(process.env.MIN_PULSE_GAP_MS || '500', 10),
   maxHistory: parseInt(process.env.MAX_HISTORY || '2000', 10),
   mqtt: {
     url: process.env.MQTT_URL || 'mqtt://127.0.0.1:1884',
