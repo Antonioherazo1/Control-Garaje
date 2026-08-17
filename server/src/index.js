@@ -11,6 +11,7 @@ db.seedAdminIfNeeded();
 
 const app = express();
 app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
 
 const mqtt = new MqttHub();
 mqtt.start();
@@ -318,21 +319,8 @@ app.get('/api/google/auth', (req, res) => {
     <label for="pin">PIN</label>
     <input id="pin" name="pin" type="password" inputmode="numeric" autocomplete="current-password" required>
     <button type="submit">Vincular</button>
-    <p id="err" class="err"></p>
   </form>
-</div>
-<script>
-document.querySelector('form').addEventListener('submit', async e => {
-  e.preventDefault();
-  const f = e.target;
-  const fd = new FormData(f);
-  const data = Object.fromEntries(fd.entries());
-  const res = await fetch('/api/google/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
-  const json = await res.json();
-  if (json.redirect) location.href = json.redirect;
-  else document.getElementById('err').textContent = json.error || 'Error';
-});
-</script></body></html>`);
+</div></body></html>`);
 });
 
 // Google OAuth2 - authenticate and redirect back with code
@@ -340,12 +328,12 @@ app.post('/api/google/auth', (req, res) => {
   const { user, pin, client_id, redirect_uri, state } = req.body || {};
   const u = db.getUserByName(user);
   if (!u || !u.pinHash || !auth.verifyPin(pin, u.salt, u.pinHash)) {
-    return res.json({ error: 'Usuario o PIN incorrecto' });
+    return res.status(401).send('Usuario o PIN incorrecto');
   }
   const code = google.genAuthCode(u.id);
   const sep = redirect_uri.includes('?') ? '&' : '?';
   const redir = redirect_uri + sep + 'code=' + code + (state ? '&state=' + encodeURIComponent(state) : '');
-  res.json({ redirect: redir });
+  res.redirect(redir);
 });
 
 // Google OAuth2 - token exchange
