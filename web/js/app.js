@@ -5,6 +5,7 @@ const state = {
   status: null,
   poll: null,
   history: [],
+  currentView: 'home',
 };
 
 const $ = (id) => document.getElementById(id);
@@ -95,7 +96,7 @@ $('btn-logout').addEventListener('click', logout);
 async function enterApp() {
   showView('app');
   renderUser();
-  renderAdminPanel();
+  setupNav();
   await refreshStatus();
   loadHistory();
   if (state.poll) clearInterval(state.poll);
@@ -107,6 +108,50 @@ function renderUser() {
   $('user-label').textContent = state.user.name + ' · ' + role;
 }
 
+/* ---------------- Navegacion ---------------- */
+
+function setupNav() {
+  const isAdmin = state.user && state.user.role === 'admin';
+  document.querySelectorAll('.nav-admin').forEach((btn) => {
+    btn.classList.toggle('hidden', !isAdmin);
+  });
+  document.querySelectorAll('.nav-btn').forEach((btn) => {
+    btn.addEventListener('click', () => switchView(btn.dataset.view));
+  });
+  switchView('home');
+}
+
+function switchView(name) {
+  state.currentView = name;
+  document.querySelectorAll('.nav-btn').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.view === name);
+  });
+  document.querySelectorAll('.view-panel').forEach((panel) => {
+    panel.classList.toggle('hidden', panel.id !== 'panel-' + name);
+  });
+  if (name === 'historial') loadHistory();
+  if (name === 'users') loadUsers();
+}
+
+/* ---------------- WiFi Icon ---------------- */
+
+function updateWifiIcon(rssi) {
+  const icon = $('wifi-icon');
+  if (rssi === undefined || rssi === null) {
+    icon.setAttribute('data-level', '0');
+    return;
+  }
+  let level = 0;
+  if (rssi >= -50) level = 4;
+  else if (rssi >= -60) level = 3;
+  else if (rssi >= -70) level = 2;
+  else if (rssi >= -80) level = 1;
+  icon.setAttribute('data-level', String(level));
+  icon.title = 'WiFi: ' + rssi + ' dBm';
+}
+
+/* ---------------- Status ---------------- */
+
 async function refreshStatus() {
   try {
     const data = await api('/status');
@@ -115,7 +160,7 @@ async function refreshStatus() {
     if (!state.user) {
       state.user = data.user;
       renderUser();
-      renderAdminPanel();
+      setupNav();
     }
   } catch {
     renderStatus();
@@ -128,6 +173,7 @@ function renderStatus() {
   if (!s) {
     device.className = 'pill offline';
     device.textContent = 'Dispositivo: —';
+    updateWifiIcon(null);
     return;
   }
   if (s.deviceOnline) {
@@ -135,9 +181,11 @@ function renderStatus() {
     const info = s.deviceInfo || {};
     const rssi = info.rssi !== undefined ? ' · ' + info.rssi + ' dBm' : '';
     device.textContent = 'Dispositivo: en linea' + rssi;
+    updateWifiIcon(info.rssi);
   } else {
     device.className = 'pill offline';
     device.textContent = s.broker ? 'Dispositivo: sin conexion' : 'Dispositivo: —';
+    updateWifiIcon(null);
   }
   renderDoors();
 }
@@ -151,7 +199,7 @@ function doorStateLabel(st) {
 function renderDoors() {
   const cont = $('doors');
   const doors = [
-    { id: 'door1', label: 'Portón Abatible' },
+    { id: 'door1', label: 'Porton Abatible' },
     { id: 'door2', label: 'Reja Corrediza' },
   ];
   const allowed = state.user && state.user.role === 'admin'
@@ -188,7 +236,6 @@ async function onCommand(e) {
     alert(tr(err.message));
   } finally {
     setTimeout(() => { btn.disabled = false; }, 600);
-    loadHistory();
   }
 }
 
@@ -204,7 +251,6 @@ $('btn-test').addEventListener('click', async () => {
     alert(tr(err.message));
   } finally {
     setTimeout(() => { btn.disabled = false; }, 600);
-    loadHistory();
   }
 });
 
@@ -228,7 +274,7 @@ function renderHistory(events) {
   const rows = events.map((ev) => {
     const when = new Date(ev.ts).toLocaleString();
     const action = { toggle: 'Accionar', open: 'Abrir', close: 'Cerrar', test: 'Prueba', login: 'Login', emergency: 'Emergencia', emergency_reset: 'Restablecer' }[ev.action] || ev.action;
-    const what = ev.door ? ({ door1: 'Portón Abatible', door2: 'Reja Corrediza' }[ev.door] || ev.door) + ' ' + action : action;
+    const what = ev.door ? ({ door1: 'Porton Abatible', door2: 'Reja Corrediza' }[ev.door] || ev.door) + ' ' + action : action;
     const cls = ev.result === 'ok' ? 'badge-ok' : ev.result === 'denied' ? 'badge-denied' : 'badge-error';
     return '<tr><td>' + when + '</td><td>' + escapeHtml(ev.user) + '</td><td>' + escapeHtml(what) + '</td><td class="' + cls + '">' + escapeHtml(ev.result) + '</td></tr>';
   }).join('');
@@ -238,12 +284,6 @@ function renderHistory(events) {
 $('btn-refresh-history').addEventListener('click', loadHistory);
 
 /* ---------------- Admin ---------------- */
-
-function renderAdminPanel() {
-  const panel = $('panel-admin');
-  panel.classList.toggle('hidden', !state.user || state.user.role !== 'admin');
-  if (state.user && state.user.role === 'admin') loadUsers();
-}
 
 async function loadUsers() {
   try {

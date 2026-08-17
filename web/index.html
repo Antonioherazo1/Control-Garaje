@@ -33,59 +33,100 @@
         <p id="user-label" class="muted"></p>
       </div>
       <div class="status-row">
+        <span id="wifi-icon" class="wifi-icon">
+          <span class="wifi-bar"></span>
+          <span class="wifi-bar"></span>
+          <span class="wifi-bar"></span>
+          <span class="wifi-bar"></span>
+        </span>
         <span id="status-device" class="pill offline">Dispositivo: —</span>
         <button id="btn-logout" class="ghost">Salir</button>
       </div>
     </header>
 
+    <nav id="main-nav">
+      <button class="nav-btn active" data-view="home">Inicio</button>
+      <button class="nav-btn" data-view="historial">Historial</button>
+      <button class="nav-btn nav-admin" data-view="test">Prueba</button>
+      <button class="nav-btn nav-admin" data-view="users">Usuarios</button>
+      <button class="nav-btn nav-admin" data-view="newuser">Nuevo usuario</button>
+      <button class="nav-btn nav-admin" data-view="temppin">PIN temporal</button>
+    </nav>
+
     <main>
-      <div id="doors" class="doors"></div>
+      <!-- Inicio: Puertas -->
+      <div id="panel-home" class="view-panel">
+        <div id="doors" class="doors"></div>
+      </div>
 
-      <section class="panel">
-        <h2>Historial
-          <button id="btn-refresh-history" class="ghost small">Actualizar</button>
-        </h2>
-        <div id="history-list" class="history-list"><p class="muted">Cargando...</p></div>
-      </section>
+      <!-- Historial -->
+      <div id="panel-historial" class="view-panel hidden">
+        <section class="panel">
+          <h2>Historial
+            <button id="btn-refresh-history" class="ghost small">Actualizar</button>
+          </h2>
+          <div id="history-list" class="history-list"><p class="muted">Cargando...</p></div>
+        </section>
+      </div>
 
-      <section id="panel-admin" class="panel hidden">
-        <h2>Administracion</h2>
-        <div class="btn-row">
-          <button id="btn-test" class="ghost">Prueba del dispositivo</button>
-        </div>
-        <h3>Usuarios</h3>
-        <div id="users-list"></div>
-
-        <h3>Nuevo usuario</h3>
-        <form id="user-form" class="row-form">
-          <input id="user-id" type="text" placeholder="ID (p.ej. maria)" required>
-          <input id="user-name" type="text" placeholder="Nombre (p.ej. Maria)" required>
-          <input id="user-pin" type="password" inputmode="numeric" minlength="4" placeholder="PIN (4+ digitos)" required>
-          <div>
-            <label class="check"><input type="checkbox" value="door1" checked> Portón Abatible</label>
-            <label class="check"><input type="checkbox" value="door2" checked> Reja Corrediza</label>
+      <!-- Prueba de dispositivo -->
+      <div id="panel-test" class="view-panel hidden">
+        <section class="panel">
+          <h2>Prueba del dispositivo</h2>
+          <p class="muted">Envia un pulso al LED de la placa y la salida D6.</p>
+          <div class="btn-row">
+            <button id="btn-test" class="ghost">Probar ahora</button>
           </div>
-          <div class="inline">
-            <input id="user-start" type="time" value="00:00" title="Inicio horario">
-            <input id="user-end" type="time" value="23:59" title="Fin horario">
-          </div>
-          <input id="user-limit" type="number" min="0" value="0" title="Limite diario (0 = ilimitado)">
-          <button type="submit">Crear usuario</button>
-        </form>
-        <p id="user-result" class="ok hidden"></p>
+        </section>
+      </div>
 
-        <h3>Nuevo PIN temporal</h3>
-        <form id="temp-form" class="row-form">
-          <input id="temp-name" type="text" placeholder="Nombre del invitado">
-          <div>
-            <label class="check"><input type="checkbox" value="door1" checked> Portón Abatible</label>
-            <label class="check"><input type="checkbox" value="door2" checked> Reja Corrediza</label>
-          </div>
-          <input id="temp-hours" type="number" min="1" max="720" value="24" title="Horas de validez">
-          <button type="submit">Generar PIN</button>
-        </form>
-        <p id="temp-result" class="ok hidden"></p>
-      </section>
+      <!-- Usuarios -->
+      <div id="panel-users" class="view-panel hidden">
+        <section class="panel">
+          <h2>Usuarios</h2>
+          <div id="users-list"></div>
+        </section>
+      </div>
+
+      <!-- Nuevo usuario -->
+      <div id="panel-newuser" class="view-panel hidden">
+        <section class="panel">
+          <h2>Nuevo usuario</h2>
+          <form id="user-form" class="row-form">
+            <input id="user-id" type="text" placeholder="ID (p.ej. maria)" required>
+            <input id="user-name" type="text" placeholder="Nombre (p.ej. Maria)" required>
+            <input id="user-pin" type="password" inputmode="numeric" minlength="4" placeholder="PIN (4+ digitos)" required>
+            <div>
+              <label class="check"><input type="checkbox" value="door1" checked> Porton Abatible</label>
+              <label class="check"><input type="checkbox" value="door2" checked> Reja Corrediza</label>
+            </div>
+            <div class="inline">
+              <input id="user-start" type="time" value="00:00" title="Inicio horario">
+              <input id="user-end" type="time" value="23:59" title="Fin horario">
+            </div>
+            <input id="user-limit" type="number" min="0" value="0" title="Limite diario (0 = ilimitado)">
+            <button type="submit">Crear usuario</button>
+          </form>
+          <p id="user-result" class="ok hidden"></p>
+        </section>
+      </div>
+
+      <!-- PIN temporal -->
+      <div id="panel-temppin" class="view-panel hidden">
+        <section class="panel">
+          <h2>Nuevo PIN temporal</h2>
+          <form id="temp-form" class="row-form">
+            <input id="temp-name" type="text" placeholder="Nombre del invitado">
+            <div>
+              <label class="check"><input type="checkbox" value="door1" checked> Porton Abatible</label>
+              <label class="check"><input type="checkbox" value="door2" checked> Reja Corrediza</label>
+            </div>
+            <input id="temp-hours" type="number" min="1" max="720" value="24" title="Horas de validez">
+            <button type="submit">Generar PIN</button>
+          </form>
+          <p id="temp-result" class="ok hidden"></p>
+        </section>
+      </div>
     </main>
   </section>
 

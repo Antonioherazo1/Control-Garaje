@@ -178,7 +178,7 @@ header {
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  padding: 8px 0 16px;
+  padding: 8px 0 12px;
 }
 
 .status-row {
@@ -186,6 +186,33 @@ header {
   align-items: center;
   gap: 8px;
 }
+
+/* ---------- WiFi Icon ---------- */
+.wifi-icon {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 18px;
+  padding: 2px;
+  cursor: default;
+}
+
+.wifi-bar {
+  width: 3.5px;
+  background: var(--border);
+  border-radius: 1.5px;
+  transition: background 0.3s;
+}
+
+.wifi-bar:nth-child(1) { height: 5px; }
+.wifi-bar:nth-child(2) { height: 8px; }
+.wifi-bar:nth-child(3) { height: 11px; }
+.wifi-bar:nth-child(4) { height: 15px; }
+
+.wifi-icon[data-level="1"] .wifi-bar:nth-child(1) { background: var(--danger); }
+.wifi-icon[data-level="2"] .wifi-bar:nth-child(-n+2) { background: var(--warn); }
+.wifi-icon[data-level="3"] .wifi-bar:nth-child(-n+3) { background: var(--accent); }
+.wifi-icon[data-level="4"] .wifi-bar { background: var(--accent); }
 
 .pill {
   padding: 6px 10px;
@@ -216,6 +243,49 @@ header {
   padding: 12px;
   border-radius: 10px;
   margin-bottom: 14px;
+}
+
+/* ---------- Nav ---------- */
+#main-nav {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 4px;
+  margin-bottom: 14px;
+  scrollbar-width: none;
+}
+
+#main-nav::-webkit-scrollbar { display: none; }
+
+.nav-btn {
+  flex-shrink: 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.nav-btn.active {
+  background: var(--accent);
+  color: #052e16;
+  border-color: var(--accent);
+}
+
+/* ---------- Vistas ---------- */
+.view-panel {
+  animation: fadeIn 0.15s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* ---------- Puertas ---------- */
