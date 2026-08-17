@@ -39,14 +39,14 @@ function deviceList() {
       traits: ['action.devices.traits.OpenClose'],
       name: { defaultNames: ['Porton Abatible'], name: 'Porton Abatible', nicknames: ['porton', 'abatible', 'el porton', 'porton abatible', 'gate', 'the gate'] },
       willReportState: true,
-      attributes: { commandOnlyOpenClose: true },
+      attributes: {},
     },
     {
       id: 'door2', type: 'action.devices.types.GATE',
       traits: ['action.devices.traits.OpenClose'],
       name: { defaultNames: ['Reja Corrediza'], name: 'Reja Corrediza', nicknames: ['reja', 'corrediza', 'la reja', 'reja corrediza', 'grill', 'the grill'] },
       willReportState: true,
-      attributes: { commandOnlyOpenClose: true },
+      attributes: {},
     },
   ];
 }
