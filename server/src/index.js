@@ -5,6 +5,7 @@ const db = require('./db');
 const auth = require('./auth');
 const perms = require('./permissions');
 const { MqttHub } = require('./mqtt');
+const google = require('./google');
 
 db.seedAdminIfNeeded();
 
@@ -272,6 +273,118 @@ app.post('/api/voice-tokens', auth.authRequired, auth.adminRequired, (req, res) 
 app.delete('/api/voice-tokens/:id', auth.authRequired, auth.adminRequired, (req, res) => {
   if (!db.deleteVoiceToken(req.params.id)) return res.status(404).json({ error: 'no_encontrado' });
   res.json({ ok: true });
+});
+
+// Google Smart Home fulfillment
+app.post('/api/google/smart-home', (req, res) => {
+  try {
+    const result = google.handleFulfillment(req.body, mqtt);
+    res.json(result);
+  } catch (e) {
+    console.error('[google] fulfillment error:', e.message);
+    res.json({ requestId: (req.body && req.body.requestId) || '', payload: {} });
+  }
+});
+
+// Google OAuth2 - authorization page (serves a login form)
+app.get('/api/google/auth', (req, res) => {
+  const { client_id, redirect_uri, state, response_type } = req.query || {};
+  if (response_type !== 'code') return res.status(400).send('response_type must be code');
+  if (!redirect_uri) return res.status(400).send('redirect_uri required');
+  res.send(`<!DOCTYPE html>
+<html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Garage Control - Vincular con Google</title>
+<style>
+  body{font-family:system-ui;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;background:#0f172a;color:#e2e8f0}
+  .card{background:#1e293b;border:1px solid #334155;border-radius:16px;padding:32px;width:340px}
+  h1{font-size:1.2rem;margin:0 0 4px;text-align:center}
+  p{font-size:.85rem;color:#94a3b8;text-align:center;margin:0 0 20px}
+  label{font-size:.85rem;color:#94a3b8;display:block;margin-bottom:4px}
+  input{width:100%;padding:10px;border-radius:8px;border:1px solid #334155;background:#0f172a;color:#e2e8f0;font-size:.9rem;box-sizing:border-box;margin-bottom:12px}
+  input:focus{outline:none;border-color:#22c55e}
+  button{width:100%;padding:12px;border:none;border-radius:10px;background:#22c55e;color:#052e16;font-weight:700;font-size:1rem;cursor:pointer}
+  button:active{transform:scale(.97)}
+  .err{color:#fca5a5;font-size:.85rem;text-align:center;margin-top:8px}
+</style></head><body>
+<div class="card">
+  <h1>Vincular Garage Control</h1>
+  <p>Ingresa tus credenciales para conectar con Google</p>
+  <form method="POST" action="/api/google/auth">
+    <input type="hidden" name="client_id" value="${client_id || ''}">
+    <input type="hidden" name="redirect_uri" value="${redirect_uri || ''}">
+    <input type="hidden" name="state" value="${state || ''}">
+    <label for="user">Usuario</label>
+    <input id="user" name="user" type="text" autocomplete="username" required>
+    <label for="pin">PIN</label>
+    <input id="pin" name="pin" type="password" inputmode="numeric" autocomplete="current-password" required>
+    <button type="submit">Vincular</button>
+    <p id="err" class="err"></p>
+  </form>
+</div>
+<script>
+document.querySelector('form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const f = e.target;
+  const fd = new FormData(f);
+  const data = Object.fromEntries(fd.entries());
+  const res = await fetch('/api/google/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+  const json = await res.json();
+  if (json.redirect) location.href = json.redirect;
+  else document.getElementById('err').textContent = json.error || 'Error';
+});
+</script></body></html>`);
+});
+
+// Google OAuth2 - authenticate and redirect back with code
+app.post('/api/google/auth', (req, res) => {
+  const { user, pin, client_id, redirect_uri, state } = req.body || {};
+  const u = db.getUserByName(user);
+  if (!u || !u.pinHash || !auth.verifyPin(pin, u.salt, u.pinHash)) {
+    return res.json({ error: 'Usuario o PIN incorrecto' });
+  }
+  const code = google.genAuthCode(u.id);
+  const sep = redirect_uri.includes('?') ? '&' : '?';
+  const redir = redirect_uri + sep + 'code=' + code + (state ? '&state=' + encodeURIComponent(state) : '');
+  res.json({ redirect: redir });
+});
+
+// Google OAuth2 - token exchange
+app.post('/api/google/token', (req, res) => {
+  const { grant_type, code, refresh_token } = req.body || {};
+  const clientSecret = req.headers.authorization || '';
+  const basicAuth = clientSecret.startsWith('Basic ') ? Buffer.from(clientSecret.slice(6), 'base64').toString() : '';
+  const [cid] = basicAuth.split(':');
+
+  if (grant_type === 'authorization_code') {
+    const result = google.exchangeCode(code);
+    if (!result) return res.status(400).json({ error: 'invalid_grant' });
+    res.json({ token_type: 'Bearer', access_token: result.accessToken, refresh_token: result.refreshToken, expires_in: result.expiresIn });
+  } else if (grant_type === 'refresh_token') {
+    const result = google.refreshAccessToken(refresh_token);
+    if (!result) return res.status(400).json({ error: 'invalid_grant' });
+    res.json({ token_type: 'Bearer', access_token: result.accessToken, expires_in: result.expiresIn });
+  } else {
+    res.status(400).json({ error: 'unsupported_grant_type' });
+  }
+});
+
+// Google OAuth2 - redirect callback (Google redirects here after auth)
+app.get('/api/google/oauth2callback', (req, res) => {
+  const { code, state } = req.query || {};
+  if (!code) return res.status(400).send('Missing code');
+  res.send(`<script>opener.postMessage({code:'${code}',state:'${state||''}'},'*');window.close();</script><p>Puedes cerrar esta ventana.</p>`);
+});
+
+// Google OAuth2 - OpenID configuration
+app.get('/.well-known/openid-configuration', (req, res) => {
+  res.json({
+    issuer: 'https://garaje.thinc.site',
+    authorization_endpoint: 'https://garaje.thinc.site/api/google/auth',
+    token_endpoint: 'https://garaje.thinc.site/api/google/token',
+    response_types_supported: ['code'],
+    grant_types_supported: ['authorization_code', 'refresh_token'],
+    token_endpoint_auth_methods_supported: ['client_secret_basic'],
+  });
 });
 
 app.use('/api', (req, res) => res.status(404).json({ error: 'not_found' }));
