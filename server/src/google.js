@@ -47,7 +47,8 @@ function execute(userId, commands, mqttHub) {
   const user = db.getUser(userId);
   const results = [];
   for (const cmd of commands) {
-    for (const devId of (cmd.devices || [])) {
+    for (const dev of (cmd.devices || [])) {
+      const devId = typeof dev === 'string' ? dev : (dev.id || dev);
       if (!['door1', 'door2'].includes(devId)) {
         results.push({ ids: [devId], status: 'ERROR', errorCode: 'deviceNotFound' });
         continue;
