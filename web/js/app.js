@@ -29,6 +29,9 @@ const MSG = {
   forbidden: 'Sin permisos de administrador',
   no_eliminar_admin: 'No puedes eliminar al admin',
   datos_incompletos: 'Datos incompletos',
+  nombre_requerido: 'Nombre requerido',
+  token_requerido: 'Token requerido',
+  token_invalido: 'Token de voz invalido',
   not_found: 'Recurso no encontrado',
 };
 
@@ -131,6 +134,7 @@ function switchView(name) {
   });
   if (name === 'historial') loadHistory();
   if (name === 'users') loadUsers();
+  if (name === 'voice') loadVoiceTokens();
 }
 
 /* ---------------- WiFi Icon ---------------- */
@@ -372,6 +376,78 @@ $('temp-form').addEventListener('submit', async (e) => {
     result.textContent = 'PIN temporal para ' + (data.user.name || 'Invitado') + ': ' + data.pin + ' (valido ' + data.user.dailyLimit + ' usos, ' + $('temp-hours').value + 'h)';
     result.classList.remove('hidden');
     loadUsers();
+  } catch (err) {
+    alert(tr(err.message));
+  }
+});
+
+/* ---------------- Voz / Siri ---------------- */
+
+async function loadVoiceTokens() {
+  try {
+    const data = await api('/voice-tokens');
+    renderVoiceTokens(data.tokens || []);
+  } catch {
+    $('voice-tokens-list').innerHTML = '<p class="muted">No se pudieron cargar los tokens</p>';
+  }
+}
+
+function renderVoiceTokens(tokens) {
+  const el = $('voice-tokens-list');
+  el.innerHTML = '';
+  if (!tokens.length) {
+    el.innerHTML = '<p class="muted" style="margin-top:12px">No hay tokens creados</p>';
+    return;
+  }
+  tokens.forEach((t) => {
+    const item = document.createElement('div');
+    item.className = 'voice-token-item';
+    const doorLabel = { door1: 'Abatible', door2: 'Reja' }[t.door] || t.door;
+    const created = new Date(t.createdAt).toLocaleDateString();
+    item.innerHTML =
+      '<div>' +
+      '<strong>' + escapeHtml(t.name) + '</strong>' +
+      '<div class="meta">' + escapeHtml(doorLabel) + ' · ' + created + '</div>' +
+      '<span class="voice-token-url" title="Toca para copiar" data-url="' + escapeAttr(t.url) + '">' + escapeHtml(t.url) + '</span>' +
+      '</div>' +
+      '<button class="mini-danger" data-del-token="' + escapeAttr(t.id) + '">Eliminar</button>';
+    el.appendChild(item);
+  });
+  el.querySelectorAll('.voice-token-url').forEach((el) => {
+    el.addEventListener('click', () => {
+      navigator.clipboard.writeText(el.dataset.url).then(() => {
+        el.style.color = 'var(--accent)';
+        el.textContent = 'Copiado!';
+        setTimeout(() => { el.style.color = ''; el.textContent = el.dataset.url; }, 1500);
+      }).catch(() => {
+        prompt('Copia la URL:', el.dataset.url);
+      });
+    });
+  });
+  el.querySelectorAll('[data-del-token]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('¿Eliminar este token de voz?')) return;
+      try {
+        await api('/voice-tokens/' + encodeURIComponent(btn.dataset.delToken), { method: 'DELETE' });
+        loadVoiceTokens();
+      } catch (err) {
+        alert(tr(err.message));
+      }
+    });
+  });
+}
+
+$('voice-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const name = $('voice-name').value.trim();
+  if (!name) return;
+  try {
+    await api('/voice-tokens', {
+      method: 'POST',
+      body: JSON.stringify({ name, door: $('voice-door').value }),
+    });
+    $('voice-name').value = '';
+    loadVoiceTokens();
   } catch (err) {
     alert(tr(err.message));
   }

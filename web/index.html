@@ -51,6 +51,7 @@
       <button class="nav-btn nav-admin" data-view="users">Usuarios</button>
       <button class="nav-btn nav-admin" data-view="newuser">Nuevo usuario</button>
       <button class="nav-btn nav-admin" data-view="temppin">PIN temporal</button>
+      <button class="nav-btn nav-admin" data-view="voice">Voz / Siri</button>
     </nav>
 
     <main>
@@ -126,6 +127,50 @@
             <button type="submit">Generar PIN</button>
           </form>
           <p id="temp-result" class="ok hidden"></p>
+        </section>
+      </div>
+
+      <!-- Voz / Siri -->
+      <div id="panel-voice" class="view-panel hidden">
+        <section class="panel">
+          <h2>Tokens de voz</h2>
+          <p class="muted" style="margin-bottom:12px">Crea un token por cada comando de voz. Luego configura un Shortcut en tu celular.</p>
+          <form id="voice-form" class="row-form">
+            <input id="voice-name" type="text" placeholder="Nombre (ej: Anton iPhone)">
+            <select id="voice-door">
+              <option value="door1">Porton Abatible</option>
+              <option value="door2">Reja Corrediza</option>
+            </select>
+            <button type="submit">Crear token</button>
+          </form>
+          <div id="voice-tokens-list"></div>
+        </section>
+        <section class="panel" style="margin-top:12px">
+          <h2>Configurar en tu celular</h2>
+          <div class="voice-steps">
+            <div class="voice-step">
+              <h3>iPhone (Siri)</h3>
+              <ol>
+                <li>Abre <strong>Atajos</strong> (Shortcuts) en tu iPhone</li>
+                <li>Toca <strong>+</strong> para crear un nuevo atajo</li>
+                <li>Busca y agrega <strong>"Obtener contenido de URL"</strong></li>
+                <li>Pega la URL del token que generaste arriba</li>
+                <li>En "Nombre" escribe: <strong>Abrir porton</strong> (o como quieras llamarlo)</li>
+                <li>Guarda y listo. Di: <em>"Hey Siri, Abrir porton"</em></li>
+              </ol>
+            </div>
+            <div class="voice-step">
+              <h3>Android (Google)</h3>
+              <ol>
+                <li>Abre <strong>Google Asistente</strong></li>
+                <li>Di: <em>"Hey Google, rutinas"</em></li>
+                <li>Toca <strong>Crear rutina</strong></li>
+                <li>En "Cuando diga": escribe <strong>Abrir porton</strong></li>
+                <li>En "Agregar accion": selecciona <strong>Obtener URL</strong></li>
+                <li>Pega la URL del token y guarda</li>
+              </ol>
+            </div>
+          </div>
         </section>
       </div>
     </main>

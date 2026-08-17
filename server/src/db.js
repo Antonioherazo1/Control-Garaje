@@ -25,6 +25,7 @@ function writeJSON(file, data) {
 const users = readJSON(path.join(config.dataDir, 'users.json'), []);
 let history = readJSON(path.join(config.dataDir, 'history.json'), []);
 const usage = readJSON(path.join(config.dataDir, 'usage.json'), {});
+let voiceTokens = readJSON(path.join(config.dataDir, 'voice-tokens.json'), []);
 
 function saveUsers() {
   writeJSON(path.join(config.dataDir, 'users.json'), users);
@@ -36,6 +37,45 @@ function saveHistory() {
 
 function saveUsage() {
   writeJSON(path.join(config.dataDir, 'usage.json'), usage);
+}
+
+function saveVoiceTokens() {
+  writeJSON(path.join(config.dataDir, 'voice-tokens.json'), voiceTokens);
+}
+
+function getVoiceToken(id) {
+  return voiceTokens.find((t) => t.id === id);
+}
+
+function addVoiceToken(name, door) {
+  const crypto = require('crypto');
+  const token = {
+    id: 'v_' + crypto.randomBytes(16).toString('hex'),
+    name: String(name || 'Voice'),
+    door: String(door || 'door1'),
+    createdAt: Date.now(),
+  };
+  voiceTokens.push(token);
+  saveVoiceTokens();
+  return token;
+}
+
+function deleteVoiceToken(id) {
+  const i = voiceTokens.findIndex((t) => t.id === id);
+  if (i < 0) return false;
+  voiceTokens.splice(i, 1);
+  saveVoiceTokens();
+  return true;
+}
+
+function getVoiceTokens() {
+  return voiceTokens.map((t) => ({
+    id: t.id,
+    name: t.name,
+    door: t.door,
+    createdAt: t.createdAt,
+    url: `https://garaje.thinc.site/api/voice?token=${t.id}`,
+  }));
 }
 
 function getUser(id) {
@@ -131,4 +171,8 @@ module.exports = {
   usedToday,
   recordUsage,
   seedAdminIfNeeded,
+  getVoiceToken,
+  getVoiceTokens,
+  addVoiceToken,
+  deleteVoiceToken,
 };

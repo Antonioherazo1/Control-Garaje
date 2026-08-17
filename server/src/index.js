@@ -232,6 +232,48 @@ app.get('/api/history', auth.authRequired, (req, res) => {
   res.json({ history: db.getHistory({ user: userFilter, limit }) });
 });
 
+app.get('/api/voice', (req, res) => {
+  const { token, door } = req.query || {};
+  if (!token) return res.status(400).json({ error: 'token_requerido' });
+
+  const vt = db.getVoiceToken(token);
+  if (!vt) return res.status(403).json({ error: 'token_invalido' });
+
+  const doorId = door || vt.door;
+  if (!DOORS[doorId]) return res.status(400).json({ error: 'puerta_invalida' });
+
+  if (mqtt.emergency) return res.status(423).json({ error: 'emergencia_activa' });
+  if (!mqtt.connected) return res.status(503).json({ error: 'broker_offline' });
+  if (!mqtt.deviceOnline) return res.status(503).json({ error: 'dispositivo_offline' });
+
+  const now = Date.now();
+  if (now - lastPulseAt < config.minPulseGapMs) {
+    return res.status(429).json({ error: 'demasiado_rapido' });
+  }
+  lastPulseAt = now;
+
+  mqtt.cmdDoor(DOORS[doorId].channel, 'toggle');
+  db.addHistory({ ts: now, user: 'voice:' + vt.name, door: doorId, action: 'toggle', result: 'ok' });
+  res.json({ ok: true, door: doorId });
+});
+
+app.get('/api/voice-tokens', auth.authRequired, auth.adminRequired, (req, res) => {
+  res.json({ tokens: db.getVoiceTokens() });
+});
+
+app.post('/api/voice-tokens', auth.authRequired, auth.adminRequired, (req, res) => {
+  const { name, door } = req.body || {};
+  if (!name) return res.status(400).json({ error: 'nombre_requerido' });
+  if (door && !DOORS[door]) return res.status(400).json({ error: 'puerta_invalida' });
+  const token = db.addVoiceToken(name, door || 'door1');
+  res.json({ token });
+});
+
+app.delete('/api/voice-tokens/:id', auth.authRequired, auth.adminRequired, (req, res) => {
+  if (!db.deleteVoiceToken(req.params.id)) return res.status(404).json({ error: 'no_encontrado' });
+  res.json({ ok: true });
+});
+
 app.use('/api', (req, res) => res.status(404).json({ error: 'not_found' }));
 
 app.use(express.static(config.publicDir));
