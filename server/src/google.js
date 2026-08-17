@@ -16,12 +16,14 @@ function deviceList() {
       traits: ['action.devices.traits.OpenClose'],
       name: { defaultNames: ['Porton Abatible'], name: 'Porton Abatible', nicknames: ['porton', 'abatible', 'porton abatible'] },
       willReportState: false,
+      attributes: { commandOnlyOpenClose: true },
     },
     {
       id: 'door2', type: 'action.devices.types.GATE',
       traits: ['action.devices.traits.OpenClose'],
       name: { defaultNames: ['Reja Corrediza'], name: 'Reja Corrediza', nicknames: ['reja', 'corrediza'] },
       willReportState: false,
+      attributes: { commandOnlyOpenClose: true },
     },
   ];
 }
@@ -91,7 +93,10 @@ function handleFulfillment(body, mqttHub, authHeader) {
       return { requestId: rid, payload: query(userId) };
     case 'action.devices.EXECUTE':
       return { requestId: rid, payload: execute(userId, input.payload && input.payload.commands || [], mqttHub) };
+    case 'action.devices.DISCONNECT':
+      return { requestId: rid, payload: {} };
     default:
+      console.log('[google] unknown intent:', intent);
       return { requestId: rid, payload: {} };
   }
 }
