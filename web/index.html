@@ -17,9 +17,9 @@
       <p class="muted">Control de portones</p>
       <form id="login-form">
         <label for="login-user">Usuario</label>
-        <input id="login-user" type="text" autocomplete="username" required>
+        <input id="login-user" type="text" autocomplete="username" placeholder="Tu usuario" required>
         <label for="login-pin">PIN</label>
-        <input id="login-pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="current-password" required>
+        <input id="login-pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="current-password" placeholder="Tu PIN" required>
         <button type="submit" id="login-btn">Entrar</button>
         <p id="login-error" class="error" role="alert"></p>
       </form>
@@ -93,18 +93,19 @@
         <section class="panel">
           <h2>Nuevo usuario</h2>
           <form id="user-form" class="row-form">
-            <input id="user-id" type="text" placeholder="ID (p.ej. maria)" required>
-            <input id="user-name" type="text" placeholder="Nombre (p.ej. Maria)" required>
+            <input id="user-id" type="text" placeholder="ID (ej: maria)" required>
+            <input id="user-name" type="text" placeholder="Nombre (ej: Maria)" required>
             <input id="user-pin" type="password" inputmode="numeric" minlength="4" placeholder="PIN (4+ digitos)" required>
-            <div>
-              <label class="check"><input type="checkbox" value="door1" checked> Porton Abatible</label>
-              <label class="check"><input type="checkbox" value="door2" checked> Reja Corrediza</label>
+            <div class="check-group">
+              <label class="check"><input type="checkbox" value="door1" checked> Abatible</label>
+              <label class="check"><input type="checkbox" value="door2" checked> Reja</label>
             </div>
-            <div class="inline">
-              <input id="user-start" type="time" value="00:00" title="Inicio horario">
-              <input id="user-end" type="time" value="23:59" title="Fin horario">
+            <div class="time-row">
+              <input id="user-start" type="time" value="00:00">
+              <span>a</span>
+              <input id="user-end" type="time" value="23:59">
             </div>
-            <input id="user-limit" type="number" min="0" value="0" title="Limite diario (0 = ilimitado)">
+            <input id="user-limit" type="number" min="0" value="0" placeholder="Limite diario (0 = sin limite)">
             <button type="submit">Crear usuario</button>
           </form>
           <p id="user-result" class="ok hidden"></p>
@@ -116,12 +117,12 @@
         <section class="panel">
           <h2>Nuevo PIN temporal</h2>
           <form id="temp-form" class="row-form">
-            <input id="temp-name" type="text" placeholder="Nombre del invitado">
-            <div>
-              <label class="check"><input type="checkbox" value="door1" checked> Porton Abatible</label>
-              <label class="check"><input type="checkbox" value="door2" checked> Reja Corrediza</label>
+            <input id="temp-name" type="text" placeholder="Nombre del invitado" class="form-full">
+            <div class="check-group">
+              <label class="check"><input type="checkbox" value="door1" checked> Abatible</label>
+              <label class="check"><input type="checkbox" value="door2" checked> Reja</label>
             </div>
-            <input id="temp-hours" type="number" min="1" max="720" value="24" title="Horas de validez">
+            <input id="temp-hours" type="number" min="1" max="720" value="24" placeholder="Horas de validez">
             <button type="submit">Generar PIN</button>
           </form>
           <p id="temp-result" class="ok hidden"></p>

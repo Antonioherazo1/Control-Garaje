@@ -79,6 +79,11 @@ h3 {
   margin-top: 10vh;
 }
 
+.login-card button[type="submit"] {
+  padding: 10px;
+  font-size: 0.9rem;
+}
+
 .card {
   background: var(--card);
   border: 1px solid var(--border);
@@ -99,19 +104,27 @@ label {
 
 input[type="text"],
 input[type="password"],
-input[type="number"] {
+input[type="number"],
+input[type="time"] {
   background: var(--card-2);
   border: 1px solid var(--border);
   color: var(--text);
-  border-radius: 10px;
-  padding: 12px;
-  font-size: 1rem;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 0.88rem;
   width: 100%;
+  transition: border-color 0.15s;
 }
 
 input:focus {
-  outline: 2px solid var(--accent);
-  border-color: transparent;
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);
+}
+
+input::placeholder {
+  color: var(--muted);
+  opacity: 0.7;
 }
 
 select {
@@ -348,25 +361,73 @@ button.cmd {
 }
 
 .row-form {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: flex-end;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  align-items: end;
 }
 
 .row-form > * {
-  flex: 1 1 140px;
+  min-width: 0;
+}
+
+.row-form > .form-full {
+  grid-column: 1 / -1;
+}
+
+.row-form > button[type="submit"] {
+  grid-column: 1 / -1;
+  padding: 10px;
+  font-size: 0.9rem;
+}
+
+.check-group {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .check {
-  display: block;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--card-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
   color: var(--text);
-  font-size: 0.9rem;
-  padding: 4px 0;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  user-select: none;
+}
+
+.check:has(input:checked) {
+  border-color: var(--accent);
+  background: rgba(34, 197, 94, 0.1);
 }
 
 .check input {
-  margin-right: 6px;
+  width: auto;
+  accent-color: var(--accent);
+}
+
+.time-row {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.time-row span {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.time-row input {
+  flex: 1;
+  min-width: 0;
 }
 
 /* ---------- Historial ---------- */
