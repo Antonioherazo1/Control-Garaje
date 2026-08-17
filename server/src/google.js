@@ -1,15 +1,36 @@
 const crypto = require('crypto');
 const db = require('./db');
 const auth = require('./auth');
+const https = require('https');
 
 const CLIENT_ID = process.env.GOOGLE_CLIENT_ID || 'garaje-control';
 const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || 'garaje-secret';
 const REDIRECT = process.env.GOOGLE_REDIRECT_URI || 'https://garaje.thinc.site/api/google/oauth2callback';
+const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || '';
 
 const authCodes = new Map();
 const tokens = new Map();
 
 const doorStates = { door1: false, door2: false };
+
+function reportState(agentUserId, deviceId, states) {
+  if (!GOOGLE_API_KEY) return;
+  const requestId = crypto.randomBytes(16).toString('hex');
+  const body = JSON.stringify({
+    requestId,
+    agentUserId,
+    payload: { devices: { [deviceId]: states } },
+  });
+  const url = new URL('https://homegraph.googleapis.com/v1/devices:reportState?key=' + GOOGLE_API_KEY);
+  const req = https.request(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } }, (res) => {
+    let data = '';
+    res.on('data', (c) => data += c);
+    res.on('end', () => console.log('[google] reportState:', res.statusCode, data.substring(0, 200)));
+  });
+  req.on('error', (e) => console.error('[google] reportState error:', e.message));
+  req.write(body);
+  req.end();
+}
 
 function deviceList() {
   return [
@@ -17,14 +38,14 @@ function deviceList() {
       id: 'door1', type: 'action.devices.types.GATE',
       traits: ['action.devices.traits.OpenClose'],
       name: { defaultNames: ['Porton Abatible'], name: 'Porton Abatible', nicknames: ['porton', 'abatible', 'el porton', 'porton abatible', 'gate', 'the gate'] },
-      willReportState: false,
+      willReportState: true,
       attributes: { commandOnlyOpenClose: true },
     },
     {
       id: 'door2', type: 'action.devices.types.GATE',
       traits: ['action.devices.traits.OpenClose'],
       name: { defaultNames: ['Reja Corrediza'], name: 'Reja Corrediza', nicknames: ['reja', 'corrediza', 'la reja', 'reja corrediza', 'grill', 'the grill'] },
-      willReportState: false,
+      willReportState: true,
       attributes: { commandOnlyOpenClose: true },
     },
   ];
@@ -66,7 +87,9 @@ function execute(userId, commands, mqttHub) {
           const open = exec.params && exec.params.open !== undefined ? exec.params.open : !doorStates[devId];
           doorStates[devId] = open;
           db.addHistory({ ts: Date.now(), user: 'google:' + userId, door: devId, action: 'toggle', result: 'ok' });
-          results.push({ ids: [devId], status: 'SUCCESS', states: { online: true, open: doorStates[devId] } });
+          const states = { online: true, status: 'SUCCESS', open: doorStates[devId] };
+          results.push({ ids: [devId], status: 'SUCCESS', states });
+          reportState(userId, devId, states);
         } else {
           results.push({ ids: [devId], status: 'ERROR', errorCode: 'functionNotSupported' });
         }
@@ -136,4 +159,4 @@ function refreshAccessToken(refreshToken) {
   return { accessToken, expiresIn: 8 * 3600 };
 }
 
-module.exports = { handleFulfillment, genAuthCode, exchangeCode, refreshAccessToken, CLIENT_ID, CLIENT_SECRET, REDIRECT };
+module.exports = { handleFulfillment, genAuthCode, exchangeCode, refreshAccessToken, CLIENT_ID, CLIENT_SECRET, REDIRECT, reportState, doorStates };
