@@ -14,14 +14,14 @@ function deviceList() {
     {
       id: 'door1', type: 'action.devices.types.GATE',
       traits: ['action.devices.traits.OpenClose'],
-      name: { defaultNames: ['Porton Abatible'], name: 'Porton Abatible', nicknames: ['porton', 'abatible', 'porton abatible'] },
+      name: { defaultNames: ['Porton Abatible'], name: 'Porton Abatible', nicknames: ['porton', 'abatible', 'el porton', 'porton abatible', 'gate', 'the gate'] },
       willReportState: false,
       attributes: { commandOnlyOpenClose: true },
     },
     {
       id: 'door2', type: 'action.devices.types.GATE',
       traits: ['action.devices.traits.OpenClose'],
-      name: { defaultNames: ['Reja Corrediza'], name: 'Reja Corrediza', nicknames: ['reja', 'corrediza'] },
+      name: { defaultNames: ['Reja Corrediza'], name: 'Reja Corrediza', nicknames: ['reja', 'corrediza', 'la reja', 'reja corrediza', 'grill', 'the grill'] },
       willReportState: false,
       attributes: { commandOnlyOpenClose: true },
     },
