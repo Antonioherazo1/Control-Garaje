@@ -13,13 +13,13 @@ function deviceList() {
   return [
     {
       id: 'door1', type: 'action.devices.types.GATE',
-      traits: ['action.devices.traits.OnOff'],
+      traits: ['action.devices.traits.OpenClose'],
       name: { defaultNames: ['Porton Abatible'], name: 'Porton Abatible', nicknames: ['porton', 'abatible', 'porton abatible'] },
       willReportState: false,
     },
     {
       id: 'door2', type: 'action.devices.types.GATE',
-      traits: ['action.devices.traits.OnOff'],
+      traits: ['action.devices.traits.OpenClose'],
       name: { defaultNames: ['Reja Corrediza'], name: 'Reja Corrediza', nicknames: ['reja', 'corrediza'] },
       willReportState: false,
     },
@@ -55,11 +55,11 @@ function execute(userId, commands, mqttHub) {
         continue;
       }
       for (const exec of (cmd.execution || [])) {
-        if (exec.command === 'action.devices.commands.OnOff') {
+        if (exec.command === 'action.devices.commands.OpenClose' || exec.command === 'action.devices.commands.OnOff') {
           const CH = { door1: 1, door2: 2 };
           mqttHub.cmdDoor(CH[devId], 'toggle');
           db.addHistory({ ts: Date.now(), user: 'google:' + userId, door: devId, action: 'toggle', result: 'ok' });
-          results.push({ ids: [devId], status: 'SUCCESS', states: { online: true, on: true } });
+          results.push({ ids: [devId], status: 'SUCCESS', states: { online: true, open: exec.params && exec.params.open !== undefined ? exec.params.open : undefined } });
         } else {
           results.push({ ids: [devId], status: 'ERROR', errorCode: 'functionNotSupported' });
         }
