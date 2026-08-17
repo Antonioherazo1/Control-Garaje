@@ -35,18 +35,18 @@ function reportState(agentUserId, deviceId, states) {
 function deviceList() {
   return [
     {
-      id: 'door1', type: 'action.devices.types.SWITCH',
-      traits: ['action.devices.traits.OnOff'],
+      id: 'door1', type: 'action.devices.types.GATE',
+      traits: ['action.devices.traits.OpenClose'],
       name: { defaultNames: ['Porton Abatible'], name: 'Porton Abatible', nicknames: ['porton', 'abatible', 'el porton', 'porton abatible', 'gate', 'the gate'] },
       willReportState: false,
-      attributes: {},
+      attributes: { commandOnlyOpenClose: true },
     },
     {
-      id: 'door2', type: 'action.devices.types.SWITCH',
-      traits: ['action.devices.traits.OnOff'],
+      id: 'door2', type: 'action.devices.types.GATE',
+      traits: ['action.devices.traits.OpenClose'],
       name: { defaultNames: ['Reja Corrediza'], name: 'Reja Corrediza', nicknames: ['reja', 'corrediza', 'la reja', 'reja corrediza', 'grill', 'the grill'] },
       willReportState: false,
-      attributes: {},
+      attributes: { commandOnlyOpenClose: true },
     },
   ];
 }
@@ -62,7 +62,7 @@ function query(userId) {
   const user = db.getUser(userId);
   const ids = user && user.role === 'admin' ? ['door1', 'door2'] : (user && user.doors) || [];
   const devices = {};
-  ids.forEach((id) => { devices[id] = { online: true, status: 'SUCCESS', on: doorStates[id] || false }; });
+  ids.forEach((id) => { devices[id] = { online: true, status: 'SUCCESS', open: doorStates[id] || false }; });
   return { devices };
 }
 
@@ -87,7 +87,7 @@ function execute(userId, commands, mqttHub) {
           const open = exec.params && exec.params.open !== undefined ? exec.params.open : !doorStates[devId];
           doorStates[devId] = open;
           db.addHistory({ ts: Date.now(), user: 'google:' + userId, door: devId, action: 'toggle', result: 'ok' });
-          const states = { online: true, status: 'SUCCESS', on: doorStates[devId] };
+          const states = { online: true, status: 'SUCCESS', open: doorStates[devId] };
           results.push({ ids: [devId], status: 'SUCCESS', states });
           reportState(userId, devId, states);
         } else {
