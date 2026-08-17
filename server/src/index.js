@@ -279,12 +279,32 @@ app.delete('/api/voice-tokens/:id', auth.authRequired, auth.adminRequired, (req,
 // Google Smart Home fulfillment
 app.post('/api/google/smart-home', (req, res) => {
   try {
-    console.log('[google] fulfillment:', JSON.stringify(req.body).substring(0, 200));
+    console.log('[google] fulfillment:', JSON.stringify(req.body).substring(0, 300));
     const result = google.handleFulfillment(req.body, mqtt, req.headers.authorization);
     res.json(result);
   } catch (e) {
     console.error('[google] fulfillment error:', e.message);
     res.json({ requestId: (req.body && req.body.requestId) || '', payload: {} });
+  }
+});
+
+// Google request sync - force Google to re-read devices
+app.post('/api/google/request-sync', auth.authRequired, auth.adminRequired, async (req, res) => {
+  try {
+    const apiKey = process.env.GOOGLE_API_KEY || '';
+    if (!apiKey) return res.status(400).json({ error: 'GOOGLE_API_KEY no configurado en .env' });
+    const url = 'https://homegraph.googleapis.com/v1/devices:requestSync?key=' + apiKey;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ agentUserId: 'admin' }),
+    });
+    const data = await response.json();
+    console.log('[google] request-sync response:', JSON.stringify(data));
+    res.json({ ok: true, data });
+  } catch (e) {
+    console.error('[google] request-sync error:', e.message);
+    res.status(500).json({ error: e.message });
   }
 });
 
