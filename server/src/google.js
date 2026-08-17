@@ -9,6 +9,8 @@ const REDIRECT = process.env.GOOGLE_REDIRECT_URI || 'https://garaje.thinc.site/a
 const authCodes = new Map();
 const tokens = new Map();
 
+const doorStates = { door1: false, door2: false };
+
 function deviceList() {
   return [
     {
@@ -39,7 +41,7 @@ function query(userId) {
   const user = db.getUser(userId);
   const ids = user && user.role === 'admin' ? ['door1', 'door2'] : (user && user.doors) || [];
   const devices = {};
-  ids.forEach((id) => { devices[id] = { online: true, status: 'SUCCESS', open: false }; });
+  ids.forEach((id) => { devices[id] = { online: true, status: 'SUCCESS', open: doorStates[id] || false }; });
   return { devices };
 }
 
@@ -61,8 +63,10 @@ function execute(userId, commands, mqttHub) {
         if (exec.command === 'action.devices.commands.OpenClose' || exec.command === 'action.devices.commands.OnOff') {
           const CH = { door1: 1, door2: 2 };
           mqttHub.cmdDoor(CH[devId], 'toggle');
+          const open = exec.params && exec.params.open !== undefined ? exec.params.open : !doorStates[devId];
+          doorStates[devId] = open;
           db.addHistory({ ts: Date.now(), user: 'google:' + userId, door: devId, action: 'toggle', result: 'ok' });
-          results.push({ ids: [devId], status: 'SUCCESS', states: { online: true, open: exec.params && exec.params.open !== undefined ? exec.params.open : undefined } });
+          results.push({ ids: [devId], status: 'SUCCESS', states: { online: true, open: doorStates[devId] } });
         } else {
           results.push({ ids: [devId], status: 'ERROR', errorCode: 'functionNotSupported' });
         }
