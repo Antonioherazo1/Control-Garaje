@@ -37,7 +37,7 @@ function query(userId) {
   const user = db.getUser(userId);
   const ids = user && user.role === 'admin' ? ['door1', 'door2'] : (user && user.doors) || [];
   const devices = {};
-  ids.forEach((id) => { devices[id] = { online: true, status: 'SUCCESS' }; });
+  ids.forEach((id) => { devices[id] = { online: true, status: 'SUCCESS', open: false }; });
   return { devices };
 }
 
