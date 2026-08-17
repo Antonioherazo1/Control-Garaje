@@ -96,7 +96,7 @@ function execute(userId, commands, mqttHub) {
       }
     }
   }
-  return { results };
+  return { commands: results };
 }
 
 function handleFulfillment(body, mqttHub, authHeader) {
