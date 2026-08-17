@@ -19,7 +19,7 @@ function reportState(agentUserId, deviceId, states) {
   const body = JSON.stringify({
     requestId,
     agentUserId,
-    payload: { devices: { [deviceId]: states } },
+    payload: { devices: { states: { [deviceId]: states } } },
   });
   const url = new URL('https://homegraph.googleapis.com/v1/devices:reportState?key=' + GOOGLE_API_KEY);
   const req = https.request(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } }, (res) => {
