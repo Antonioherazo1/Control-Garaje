@@ -279,7 +279,8 @@ app.delete('/api/voice-tokens/:id', auth.authRequired, auth.adminRequired, (req,
 // Google Smart Home fulfillment
 app.post('/api/google/smart-home', (req, res) => {
   try {
-    const result = google.handleFulfillment(req.body, mqtt);
+    console.log('[google] fulfillment:', JSON.stringify(req.body).substring(0, 200));
+    const result = google.handleFulfillment(req.body, mqtt, req.headers.authorization);
     res.json(result);
   } catch (e) {
     console.error('[google] fulfillment error:', e.message);

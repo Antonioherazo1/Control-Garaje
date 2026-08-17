@@ -69,14 +69,20 @@ function execute(userId, commands, mqttHub) {
   return { results };
 }
 
-function handleFulfillment(body, mqttHub) {
+function handleFulfillment(body, mqttHub, authHeader) {
   const rid = (body && body.requestId) || '';
   const input = body && body.inputs && body.inputs[0];
   if (!input) return { requestId: rid, payload: {} };
   const intent = input.intent;
-  const tok = body.authorizationCode || 'admin';
-  const data = tokens.get(tok);
-  const userId = data ? data.userId : 'admin';
+
+  let userId = 'admin';
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const accessToken = authHeader.slice(7);
+    const data = tokens.get(accessToken);
+    if (data) userId = data.userId;
+  }
+
+  console.log('[google] intent:', intent, 'userId:', userId, 'requestId:', rid);
 
   switch (intent) {
     case 'action.devices.SYNC':
