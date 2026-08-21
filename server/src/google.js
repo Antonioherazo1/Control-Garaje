@@ -48,6 +48,13 @@ function deviceList() {
       willReportState: false,
       attributes: { commandOnlyOpenClose: true },
     },
+    {
+      id: 'doorAll', type: 'action.devices.types.GATE',
+      traits: ['action.devices.traits.OpenClose'],
+      name: { defaultNames: ['Las Puertas'], name: 'Las Puertas', nicknames: ['puertas', 'las puertas', 'los portones', 'portones', 'ambas puertas', 'todas las puertas', 'doors', 'the doors'] },
+      willReportState: false,
+      attributes: { commandOnlyOpenClose: true },
+    },
   ];
 }
 
@@ -60,7 +67,7 @@ function sync(userId) {
 
 function query(userId) {
   const user = db.getUser(userId);
-  const ids = user && user.role === 'admin' ? ['door1', 'door2'] : (user && user.doors) || [];
+  const ids = user && user.role === 'admin' ? ['door1', 'door2', 'doorAll'] : (user && user.doors) || [];
   const devices = {};
   ids.forEach((id) => { devices[id] = { online: true, status: 'SUCCESS', open: doorStates[id] || false }; });
   return { devices };
@@ -72,22 +79,25 @@ function execute(userId, commands, mqttHub) {
   for (const cmd of commands) {
     for (const dev of (cmd.devices || [])) {
       const devId = typeof dev === 'string' ? dev : (dev.id || dev);
-      if (!['door1', 'door2'].includes(devId)) {
+      if (!['door1', 'door2', 'doorAll'].includes(devId)) {
         results.push({ ids: [devId], status: 'ERROR', errorCode: 'deviceNotFound' });
         continue;
       }
-      if (user && user.role !== 'admin' && !(user.doors && user.doors.includes(devId))) {
+      if (user && user.role !== 'admin' && !(user.doors && (user.doors.includes(devId) || user.doors.includes('door1') && user.doors.includes('door2')))) {
         results.push({ ids: [devId], status: 'ERROR', errorCode: 'functionNotSupported' });
         continue;
       }
       for (const exec of (cmd.execution || [])) {
         if (exec.command === 'action.devices.commands.OpenClose' || exec.command === 'action.devices.commands.OnOff') {
           const CH = { door1: 1, door2: 2 };
-          mqttHub.cmdDoor(CH[devId], 'toggle');
+          const targets = devId === 'doorAll' ? ['door1', 'door2'] : [devId];
           const open = exec.params && exec.params.open !== undefined ? exec.params.open : !doorStates[devId];
-          doorStates[devId] = open;
+          targets.forEach((t) => {
+            mqttHub.cmdDoor(CH[t], 'toggle');
+            doorStates[t] = open;
+          });
           db.addHistory({ ts: Date.now(), user: 'google:' + userId, door: devId, action: 'toggle', result: 'ok' });
-          const states = { online: true, status: 'SUCCESS', open: doorStates[devId] };
+          const states = { online: true, status: 'SUCCESS', open };
           results.push({ ids: [devId], status: 'SUCCESS', states });
           reportState(userId, devId, states);
         } else {
