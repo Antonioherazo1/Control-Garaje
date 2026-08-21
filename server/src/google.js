@@ -92,8 +92,8 @@ function execute(userId, commands, mqttHub) {
           const CH = { door1: 1, door2: 2 };
           const targets = devId === 'doorAll' ? ['door1', 'door2'] : [devId];
           const open = exec.params && exec.params.open !== undefined ? exec.params.open : !doorStates[devId];
-          targets.forEach((t) => {
-            mqttHub.cmdDoor(CH[t], 'toggle');
+          targets.forEach((t, i) => {
+            setTimeout(() => mqttHub.cmdDoor(CH[t], 'toggle'), i * 600);
             doorStates[t] = open;
           });
           db.addHistory({ ts: Date.now(), user: 'google:' + userId, door: devId, action: 'toggle', result: 'ok' });
