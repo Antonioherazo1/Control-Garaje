@@ -79,10 +79,18 @@
             <button id="btn-test" class="ghost">Probar ahora</button>
           </div>
           <hr class="panel-sep">
-          <h3>Red WiFi</h3>
-          <p class="muted">El ESP guarda la red WiFi en su memoria. Si necesitas cambiarla, borra la configuracion guardada; el ESP creara el punto de acceso <b>GarageControl</b> (clave 12345678) para configurar una nueva red.</p>
+          <h3>Redes WiFi</h3>
+          <p class="muted">El ESP8266 guarda <b>hasta 5 redes</b> en su memoria y se conecta a la primera disponible. Aqui puedes agregar, olvidar o borrar redes.</p>
+          <form id="wifi-form" class="row-form">
+            <input id="wifi-ssid" type="text" placeholder="Nombre de la red (SSID)" required>
+            <input id="wifi-pass" type="password" placeholder="Clave de la red" required>
+            <button type="submit" class="primary">Guardar red</button>
+          </form>
+          <hr class="panel-sep">
+          <h3>Redes guardadas</h3>
+          <p class="muted">La lista vive en el ESP. No se puede leer remotamente (por seguridad), solo agregar u olvidar.</p>
           <div class="btn-row">
-            <button id="btn-wifi-reset" class="danger">Borrar red WiFi guardada</button>
+            <button id="btn-wifi-reset" class="danger">Borrar TODAS las redes</button>
           </div>
         </section>
       </div>

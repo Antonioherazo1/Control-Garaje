@@ -9,6 +9,7 @@ const TOPICS = {
   emergencyCmd: `${P()}/emergency/cmd`,
   testCmd: `${P()}/test/cmd`,
   wifiCmd: `${P()}/wifi/cmd`,
+  setupCmd: `${P()}/setup/cmd`,
 };
 
 class MqttHub {
@@ -101,6 +102,10 @@ class MqttHub {
 
   resetWifi() {
     return this.publish(TOPICS.wifiCmd, 'reset');
+  }
+
+  setup(cmd) {
+    return this.publish(TOPICS.setupCmd, cmd);
   }
 
   emergency(action) {

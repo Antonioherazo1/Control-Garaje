@@ -147,6 +147,30 @@ app.post('/api/wifi/reset', auth.authRequired, auth.adminRequired, (req, res) =>
   res.json({ ok: true, message: 'Comando enviado. El ESP borrará la red guardada y abrirá el portal de configuración.' });
 });
 
+app.post('/api/wifi/network', auth.authRequired, auth.adminRequired, (req, res) => {
+  const u = db.getUser(req.userId);
+  if (!u) return res.status(401).json({ error: 'usuario_no_existe' });
+  const { ssid, pass } = req.body || {};
+  if (!ssid || !pass) return res.status(400).json({ error: 'ssid_y_clave_requeridos' });
+  if (!mqtt.connected) return res.status(503).json({ error: 'broker_offline' });
+  // Escape dos puntos en ssid/clave
+  const cmd = 'wifi:' + ssid + ':' + pass;
+  mqtt.setup(cmd);
+  db.addHistory({ ts: Date.now(), user: u.id, door: null, action: 'wifi_add', result: 'ok', wifi: ssid });
+  res.json({ ok: true, message: 'Red agregada en el ESP. Se conectará a la mejor disponible.' });
+});
+
+app.post('/api/wifi/forget', auth.authRequired, auth.adminRequired, (req, res) => {
+  const u = db.getUser(req.userId);
+  if (!u) return res.status(401).json({ error: 'usuario_no_existe' });
+  const { ssid } = req.body || {};
+  if (!ssid) return res.status(400).json({ error: 'ssid_requerido' });
+  if (!mqtt.connected) return res.status(503).json({ error: 'broker_offline' });
+  mqtt.setup('forget:' + ssid);
+  db.addHistory({ ts: Date.now(), user: u.id, door: null, action: 'wifi_forget', result: 'ok', wifi: ssid });
+  res.json({ ok: true, message: 'Red olvidada.' });
+});
+
 app.post('/api/emergency', auth.authRequired, (req, res) => {
   const { action } = req.body || {};
   const u = db.getUser(req.userId);

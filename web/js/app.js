@@ -259,7 +259,7 @@ $('btn-test').addEventListener('click', async () => {
 });
 
 $('btn-wifi-reset').addEventListener('click', async () => {
-  if (!confirm('¿Borrar la red WiFi guardada en el ESP? Se abrira el portal de configuracion (AP "GarageControl").')) return;
+  if (!confirm('¿Borrar TODAS las redes WiFi guardadas en el ESP? Se abrira el portal de configuracion (AP "GarageControl").')) return;
   const btn = $('btn-wifi-reset');
   btn.disabled = true;
   try {
@@ -269,6 +269,24 @@ $('btn-wifi-reset').addEventListener('click', async () => {
     alert(tr(err.message));
   } finally {
     setTimeout(() => { btn.disabled = false; }, 600);
+  }
+});
+
+$('wifi-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const ssid = $('wifi-ssid').value.trim();
+  const pass = $('wifi-pass').value;
+  if (!ssid || !pass) return;
+  try {
+    const data = await api('/wifi/network', {
+      method: 'POST',
+      body: JSON.stringify({ ssid, pass }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+    alert(data.message || 'Red agregada.');
+    $('wifi-form').reset();
+  } catch (err) {
+    alert(tr(err.message));
   }
 });
 
