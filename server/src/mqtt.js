@@ -4,6 +4,7 @@ const config = require('./config');
 const P = () => config.mqtt.prefix;
 const TOPICS = {
   deviceStatus: `${P()}/device/status`,
+  deviceNetworks: `${P()}/device/networks`,
   doorCmd: (n) => `${P()}/door/${n}/cmd`,
   doorState: (n) => `${P()}/door/${n}/state`,
   emergencyCmd: `${P()}/emergency/cmd`,
@@ -18,6 +19,7 @@ class MqttHub {
     this.connected = false;
     this.deviceOnline = false;
     this.deviceInfo = {};
+    this.savedNetworks = [];
     this.doorStates = { door1: 'unknown', door2: 'unknown' };
     this.emergency = false;
     this._handlers = {};
@@ -54,7 +56,7 @@ class MqttHub {
   _onConnect() {
     this.connected = true;
     console.log('[mqtt] conectado a', config.mqtt.url);
-    [TOPICS.deviceStatus, TOPICS.emergencyCmd, TOPICS.doorState(1), TOPICS.doorState(2)].forEach((t) =>
+    [TOPICS.deviceStatus, TOPICS.deviceNetworks, TOPICS.emergencyCmd, TOPICS.doorState(1), TOPICS.doorState(2)].forEach((t) =>
       this.client.subscribe(t, { qos: 0 })
     );
     this.emit('change');
@@ -72,6 +74,13 @@ class MqttHub {
         }
       } catch {
         this.deviceOnline = payload !== 'offline';
+      }
+    } else if (topic === TOPICS.deviceNetworks) {
+      try {
+        const msg = JSON.parse(payload);
+        this.savedNetworks = Array.isArray(msg.networks) ? msg.networks : [];
+      } catch {
+        // ignorar payload invalido
       }
     } else if (topic === TOPICS.emergencyCmd) {
       this.emergency = payload === 'stop';
@@ -117,6 +126,7 @@ class MqttHub {
       broker: this.connected,
       deviceOnline: this.deviceOnline,
       deviceInfo: this.deviceInfo,
+      savedNetworks: this.savedNetworks,
       doorStates: this.doorStates,
       emergency: this.emergency,
     };

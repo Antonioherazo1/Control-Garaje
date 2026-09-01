@@ -71,6 +71,7 @@ app.get('/api/status', auth.authRequired, (req, res) => {
     broker: mqtt.connected,
     deviceOnline: mqtt.deviceOnline,
     deviceInfo: mqtt.deviceInfo,
+    savedNetworks: mqtt.savedNetworks,
     doorStates: mqtt.doorStates,
     emergency: mqtt.emergency,
     user: publicUser(u),

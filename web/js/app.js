@@ -100,6 +100,7 @@ async function enterApp() {
   showView('app');
   renderUser();
   setupNav();
+  initNetworksBtn();
   await refreshStatus();
   loadHistory();
   if (state.poll) clearInterval(state.poll);
@@ -161,6 +162,7 @@ async function refreshStatus() {
     const data = await api('/status');
     state.status = data;
     renderStatus();
+    renderSavedNetworks();
     if (!state.user) {
       state.user = data.user;
       renderUser();
@@ -184,7 +186,8 @@ function renderStatus() {
     device.className = 'pill online';
     const info = s.deviceInfo || {};
     const rssi = info.rssi !== undefined ? ' · ' + info.rssi + ' dBm' : '';
-    device.textContent = 'Dispositivo: en linea' + rssi;
+    const net = info.ssid ? ' · ' + info.ssid : '';
+    device.textContent = 'Dispositivo: en linea' + net + rssi;
     updateWifiIcon(info.rssi);
   } else {
     device.className = 'pill offline';
@@ -258,20 +261,6 @@ $('btn-test').addEventListener('click', async () => {
   }
 });
 
-$('btn-wifi-reset').addEventListener('click', async () => {
-  if (!confirm('¿Borrar TODAS las redes WiFi guardadas en el ESP? Se abrira el portal de configuracion (AP "GarageControl").')) return;
-  const btn = $('btn-wifi-reset');
-  btn.disabled = true;
-  try {
-    await api('/wifi/reset', { method: 'POST' });
-    alert('Comando enviado. Espera ~10s, luego conectate al AP "GarageControl" (clave 12345678) y entra a http://192.168.4.1 para configurar la nueva red.');
-  } catch (err) {
-    alert(tr(err.message));
-  } finally {
-    setTimeout(() => { btn.disabled = false; }, 600);
-  }
-});
-
 $('wifi-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const ssid = $('wifi-ssid').value.trim();
@@ -289,6 +278,49 @@ $('wifi-form').addEventListener('submit', async (e) => {
     alert(tr(err.message));
   }
 });
+
+/* ---------------- Redes WiFi guardadas ---------------- */
+
+function renderSavedNetworks() {
+  const el = $('saved-networks');
+  const now = $('status-wifi-now');
+  const s = state.status;
+  if (now && s && s.deviceInfo && s.deviceInfo.ssid) {
+    now.textContent = 'Red actual: ' + s.deviceInfo.ssid + (s.deviceInfo.ip ? ' (' + s.deviceInfo.ip + ')' : '');
+  } else if (now) {
+    now.textContent = 'Red actual: —';
+  }
+  if (!el) return;
+  const nets = (s && s.savedNetworks) || [];
+  if (!nets.length) {
+    el.innerHTML = '<p class="muted">No hay redes guardadas.</p>';
+    return;
+  }
+  el.innerHTML = '';
+  nets.forEach((net) => {
+    const row = document.createElement('div');
+    row.className = 'history-item';
+    row.innerHTML = '<span>' + net + '</span>';
+    el.appendChild(row);
+  });
+}
+
+var _networksBtnInit = false;
+function initNetworksBtn() {
+  if (_networksBtnInit) return;
+  _networksBtnInit = true;
+  const btn = $('btn-refresh-networks');
+  if (btn) btn.addEventListener('click', () => { refreshStatus(); });
+  const reset = $('btn-wifi-reset');
+  if (reset) reset.addEventListener('click', () => {
+    if (!confirm('¿Borrar TODAS las redes WiFi guardadas en el ESP? Se abrira el portal de configuracion (AP "GarageControl").')) return;
+    reset.disabled = true;
+    api('/wifi/reset', { method: 'POST' })
+      .then(() => alert('Comando enviado. Espera ~10s, luego conectate al AP "GarageControl" (clave 12345678) y entra a http://192.168.4.1 para configurar la nueva red.'))
+      .catch((err) => alert(tr(err.message)))
+      .finally(() => setTimeout(() => { reset.disabled = false; }, 600));
+  });
+}
 
 /* ---------------- Historial ---------------- */
 

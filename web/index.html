@@ -88,8 +88,11 @@
           </form>
           <hr class="panel-sep">
           <h3>Redes guardadas</h3>
-          <p class="muted">La lista vive en el ESP. No se puede leer remotamente (por seguridad), solo agregar u olvidar.</p>
+          <p class="muted">El ESP publica la lista de redes guardadas y la red a la que esta conectado.</p>
+          <p id="status-wifi-now" class="muted">Red actual: —</p>
+          <div id="saved-networks" class="history-list"><p class="muted">Cargando...</p></div>
           <div class="btn-row">
+            <button id="btn-refresh-networks" class="ghost">Actualizar redes</button>
             <button id="btn-wifi-reset" class="danger">Borrar TODAS las redes</button>
           </div>
         </section>
