@@ -133,6 +133,20 @@ app.post('/api/test', auth.authRequired, auth.adminRequired, (req, res) => {
   res.json({ ok: true });
 });
 
+app.post('/api/wifi/reset', auth.authRequired, auth.adminRequired, (req, res) => {
+  const u = db.getUser(req.userId);
+  if (!u) return res.status(401).json({ error: 'usuario_no_existe' });
+  if (!mqtt.connected) {
+    return res.status(503).json({ error: 'broker_offline' });
+  }
+  if (!mqtt.deviceOnline) {
+    return res.status(503).json({ error: 'dispositivo_offline' });
+  }
+  mqtt.resetWifi();
+  db.addHistory({ ts: Date.now(), user: u.id, door: null, action: 'wifi_reset', result: 'ok' });
+  res.json({ ok: true, message: 'Comando enviado. El ESP borrará la red guardada y abrirá el portal de configuración.' });
+});
+
 app.post('/api/emergency', auth.authRequired, (req, res) => {
   const { action } = req.body || {};
   const u = db.getUser(req.userId);

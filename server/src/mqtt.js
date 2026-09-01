@@ -8,6 +8,7 @@ const TOPICS = {
   doorState: (n) => `${P()}/door/${n}/state`,
   emergencyCmd: `${P()}/emergency/cmd`,
   testCmd: `${P()}/test/cmd`,
+  wifiCmd: `${P()}/wifi/cmd`,
 };
 
 class MqttHub {
@@ -96,6 +97,10 @@ class MqttHub {
 
   testPulse() {
     return this.publish(TOPICS.testCmd, 'ping');
+  }
+
+  resetWifi() {
+    return this.publish(TOPICS.wifiCmd, 'reset');
   }
 
   emergency(action) {

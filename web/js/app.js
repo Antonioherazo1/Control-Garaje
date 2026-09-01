@@ -258,6 +258,20 @@ $('btn-test').addEventListener('click', async () => {
   }
 });
 
+$('btn-wifi-reset').addEventListener('click', async () => {
+  if (!confirm('¿Borrar la red WiFi guardada en el ESP? Se abrira el portal de configuracion (AP "GarageControl").')) return;
+  const btn = $('btn-wifi-reset');
+  btn.disabled = true;
+  try {
+    await api('/wifi/reset', { method: 'POST' });
+    alert('Comando enviado. Espera ~10s, luego conectate al AP "GarageControl" (clave 12345678) y entra a http://192.168.4.1 para configurar la nueva red.');
+  } catch (err) {
+    alert(tr(err.message));
+  } finally {
+    setTimeout(() => { btn.disabled = false; }, 600);
+  }
+});
+
 /* ---------------- Historial ---------------- */
 
 async function loadHistory() {

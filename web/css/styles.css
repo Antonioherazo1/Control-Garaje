@@ -37,6 +37,12 @@ html, body {
   display: none !important;
 }
 
+.panel-sep {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 18px 0;
+}
+
 h1 {
   margin: 0 0 4px;
   font-size: 1.5rem;
