@@ -1,4 +1,4 @@
-const CACHE = 'garage-v6';
+const CACHE = 'garage-v7';
 const ASSETS = [
   './',
   'css/styles.css',
