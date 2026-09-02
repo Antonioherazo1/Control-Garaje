@@ -72,6 +72,7 @@ class MqttHub {
           this.deviceOnline = true;
           this.deviceInfo = msg;
         }
+        console.log('[mqtt] deviceStatus:', JSON.stringify(msg));
       } catch {
         this.deviceOnline = payload !== 'offline';
       }
@@ -79,6 +80,7 @@ class MqttHub {
       try {
         const msg = JSON.parse(payload);
         this.savedNetworks = Array.isArray(msg.networks) ? msg.networks : [];
+        console.log('[mqtt] deviceNetworks:', JSON.stringify(this.savedNetworks));
       } catch {
         // ignorar payload invalido
       }
