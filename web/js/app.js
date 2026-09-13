@@ -227,6 +227,19 @@ function renderDoors() {
     cont.appendChild(card);
   });
   cont.querySelectorAll('.cmd').forEach((btn) => btn.addEventListener('click', onCommand));
+
+  if (allowed.length === 2) {
+    const both = document.createElement('div');
+    both.className = 'door door-all';
+    both.innerHTML =
+      '<h3>Ambas puertas</h3>' +
+      '<p class="muted">Acciona el porton abatible y la reja al mismo tiempo.</p>' +
+      '<div class="btn-row">' +
+      '  <button class="cmd cmd-all" data-door="all" data-action="toggle">Accionar ambas</button>' +
+      '</div>';
+    cont.appendChild(both);
+    both.querySelectorAll('.cmd').forEach((btn) => btn.addEventListener('click', onCommand));
+  }
 }
 
 async function onCommand(e) {

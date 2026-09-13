@@ -80,16 +80,26 @@ app.get('/api/status', auth.authRequired, (req, res) => {
 
 app.post('/api/command', auth.authRequired, (req, res) => {
   const { door, action } = req.body || {};
-  if (!DOORS[door]) return res.status(400).json({ error: 'puerta_invalida' });
+  const isAll = door === 'all';
+  if (!isAll && !DOORS[door]) return res.status(400).json({ error: 'puerta_invalida' });
   if (!['open', 'close', 'toggle'].includes(action)) return res.status(400).json({ error: 'accion_invalida' });
 
   const u = db.getUser(req.userId);
   if (!u) return res.status(401).json({ error: 'usuario_no_existe' });
 
-  const check = perms.checkAccess(u, door);
-  if (!check.allowed) {
-    db.addHistory({ ts: Date.now(), user: u.id, door, action, result: 'denied', reason: check.reason });
-    return res.status(403).json({ error: check.reason });
+  if (isAll) {
+    const hasAll = u.role === 'admin' ||
+      (Array.isArray(u.doors) && u.doors.includes('door1') && u.doors.includes('door2'));
+    if (!hasAll) {
+      db.addHistory({ ts: Date.now(), user: u.id, door, action, result: 'denied', reason: 'sin_acceso' });
+      return res.status(403).json({ error: 'sin_acceso' });
+    }
+  } else {
+    const check = perms.checkAccess(u, door);
+    if (!check.allowed) {
+      db.addHistory({ ts: Date.now(), user: u.id, door, action, result: 'denied', reason: check.reason });
+      return res.status(403).json({ error: check.reason });
+    }
   }
 
   if (mqtt.emergency) {
@@ -106,15 +116,22 @@ app.post('/api/command', auth.authRequired, (req, res) => {
   }
 
   const now = Date.now();
-  if (now - lastPulseAt < config.minPulseGapMs) {
+  if (now - lastPulseAt < config.minPulseGapMs && !isAll) {
     db.addHistory({ ts: now, user: u.id, door, action, result: 'denied', reason: 'demasiado_rapido' });
     return res.status(429).json({ error: 'demasiado_rapido' });
   }
   lastPulseAt = now;
 
   db.recordUsage(u.id);
-  mqtt.cmdDoor(DOORS[door].channel, action);
-  db.addHistory({ ts: now, user: u.id, door, action, result: 'ok' });
+  if (isAll) {
+    ['door1', 'door2'].forEach((t, i) => {
+      setTimeout(() => mqtt.cmdDoor(DOORS[t].channel, action), i * 600);
+    });
+    db.addHistory({ ts: now, user: u.id, door: 'all', action, result: 'ok' });
+  } else {
+    mqtt.cmdDoor(DOORS[door].channel, action);
+    db.addHistory({ ts: now, user: u.id, door, action, result: 'ok' });
+  }
   res.json({ ok: true });
 });
 

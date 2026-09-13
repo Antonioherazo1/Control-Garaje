@@ -213,6 +213,13 @@ header {
   gap: 8px;
 }
 
+.credit {
+  margin: 2px 0 0;
+  font-size: 0.72rem;
+  color: var(--muted);
+  opacity: 0.8;
+}
+
 /* ---------- WiFi Icon ---------- */
 .wifi-icon {
   display: inline-flex;
@@ -362,6 +369,20 @@ button.cmd {
   padding: 22px 12px;
   font-size: 1.35rem;
   border-radius: 14px;
+}
+
+.door-all {
+  border-color: var(--accent-dark);
+  background: var(--card-2);
+}
+
+.door-all h3 {
+  color: var(--accent);
+}
+
+button.cmd-all {
+  background: var(--accent);
+  color: #052e16;
 }
 
 /* ---------- Paneles ---------- */
