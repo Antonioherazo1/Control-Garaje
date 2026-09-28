@@ -25,7 +25,7 @@
  *       "garaje/wifi/cmd"   -> "reset"  (borra TODAS las redes)
  *                     "forget:<ssid>"  (olvida una red)
  *
- * v3.2  02/09/2026        Fix reconnect tras apagado/encendido
+ * v3.2  28/09/2026        Fix reconnect tras apagado/encendido
  *   - WiFi.persistent(false): evita que el SDK del ESP8266 recuerde el ultimo
  *     modo (AP/STA) y la ultima red, que provocaba que al encender tras un
  *     apagon no se conectara a las redes guardadas.
@@ -35,7 +35,15 @@
  *     esta activo (antes, cada 8s llamaba tryConnectAny que hacia
  *     WiFi.mode(WIFI_STA) y apagaba el AP).
  *   - handleWebSave limpia AP/STA antes de ESP.restart().
- *   - openConfigAP() desconecta y fuerza modo AP antes de abrir el AP.
+ *     el AP al abrir el AP.
+ *
+ * v3.3  02/09/2026        Reintento con AP abierto
+ *   - Con el AP de configuracion activo, cada 20s escanea buscando una red
+ *     guardada disponible (ej. una red 2.4GHz que reaparece). Si la encuentra,
+ *     cierra el AP y se conecta; si falla, reabre el AP.
+ *   - Resuelve el caso de redes como 'Familia Herazo 5G' cuyo nombre se usa
+ *     tanto en 2.4GHz como en 5GHz: cuando la banda 2.4GHz esta activa, el ESP
+ *     conecta solo sin necesidad de reconfigurar.
  *                              "forget:<ssid>"  (borra una red puntual)
  *   - Boton FLASH (GPIO0) al encender: borra config y abre portal AP.
  * ─────────────────────────────────────────────────────────────
@@ -158,6 +166,7 @@ unsigned long lastWifiRetry = 0;
 bool forceApAfterTimeout = false;
 uint8_t wifiScanIdx = 0;
 bool scanningNetworks = false;
+unsigned long apRetryAt = 0;
 
 // --- MQTT reconexion ---
 unsigned long lastMqttAttempt = 0;
@@ -551,6 +560,43 @@ void tryConnectAny() {
   Serial.println("[wifi] ninguna red guardada disponible ahora");
 }
 
+// Reintenta conectar a una red guardada aunque el AP de configuracion este
+// abierto. Deja el AP activo si aun no se logra conectar. Esto permite que
+// el ESP detecte solas las redes guardadas que vuelvan a estar disponibles
+// (por ejemplo cuando una red 2.4GHz vuelve a aparecer) sin tener que
+// configurar de nuevo desde el portal.
+void retryFromAp() {
+  if (netCount == 0) { apRetryAt = millis() + 10000; return; }
+  Serial.println("[wifi] AP activo; reintentando conexion a red guardada...");
+  WiFi.mode(WIFI_AP_STA);
+  delay(50);
+  int n = WiFi.scanNetworks();
+  bool found = false;
+  for (int i = 0; i < n && !found; i++) {
+    String s = WiFi.SSID(i);
+    for (int j = 0; j < netCount; j++) {
+      if (networks[j].set && strcmp(networks[j].ssid, s.c_str()) == 0) found = true;
+    }
+  }
+  WiFi.scanDelete();
+  if (!found) {
+    Serial.println("[wifi] todavia no visible; mantengo AP");
+    return;
+  }
+  Serial.println("[wifi] red guardada visible; conectando y cerrando AP");
+  WiFi.softAPdisconnect(true);
+  delay(50);
+  WiFi.mode(WIFI_STA);
+  delay(50);
+  apActive = false;
+  dnsServer.stop();
+  tryConnectAny();
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("[wifi] fallo el intento; reabro AP de configuracion");
+    openConfigAP();
+  }
+}
+
 /* =================== WEB CONFIG (AP / pagina local) =================== */
 
 String webPage(bool saved) {
@@ -626,7 +672,7 @@ void openConfigAP() {
 
 void setup() {
   Serial.begin(115200);
-  Serial.println("\nGarageControl ESP8266 v3.2 iniciando...");
+  Serial.println("\nGarageControl ESP8266 v3.3 iniciando...");
   EEPROM.begin(EEPROM_SIZE);
   loadConfig();
 
@@ -676,6 +722,7 @@ void setup() {
     if (btnPressed) Serial.println("[setup] boton FLASH detectado; abriendo AP de config");
     else Serial.println("[wifi] sin redes guardadas; abriendo AP de configuracion");
     openConfigAP();
+    apRetryAt = millis() + 20000;
   }
 
   // El servidor web siempre esta activo:
@@ -709,6 +756,12 @@ void loop() {
   if (apActive) {
     dnsServer.processNextRequest();
     webServer.handleClient();
+    // Aun con el AP abierto, cada 20s buscamos si alguna red guardada esta
+    // disponible (por ejemplo si volvio la 2.4GHz) y conectamos.
+    if (haveNetworks() && (unsigned long)(now - apRetryAt) > 20000) {
+      apRetryAt = now;
+      retryFromAp();
+    }
   } else if (WiFi.status() == WL_CONNECTED) {
     webServer.handleClient();
   }
