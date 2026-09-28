@@ -44,6 +44,14 @@
  *   - Resuelve el caso de redes como 'Familia Herazo 5G' cuyo nombre se usa
  *     tanto en 2.4GHz como en 5GHz: cuando la banda 2.4GHz esta activa, el ESP
  *     conecta solo sin necesidad de reconfigurar.
+ *
+ * v3.4  02/09/2026        Fix lista de redes visibles truncada
+ *   - tryConnectAny() cortaba la lista de redes visibles en MAX_NETWORKS (5)
+ *     unicas. Con mas de 5 redes en el aire (ej. 10-14), 'Familia Herazo 5G'
+ *     quedaba fuera y jamas se comparaba con las guardadas.
+ *   - Ahora revisa TODAS las redes visibles contra cada red guardada y prueba
+ *     conexion a las que coinciden. Tambien evita invalidar el buffer del
+ *     escaneo al conectar (recopila candidatos primero, luego conecta).
  *                              "forget:<ssid>"  (borra una red puntual)
  *   - Boton FLASH (GPIO0) al encender: borra config y abre portal AP.
  * ─────────────────────────────────────────────────────────────
@@ -522,36 +530,40 @@ void tryConnectAny() {
   int n = WiFi.scanNetworks();
   Serial.printf("[wifi] se vieron %d redes\n", n);
 
-  // Construir lista de SSIDs visibles (sin claves)
-  String visible[MAX_NETWORKS];
-  int visibleCount = 0;
   Serial.println("[wifi] redes visibles:");
-  for (int i = 0; i < n && visibleCount < MAX_NETWORKS; i++) {
-    String s = WiFi.SSID(i);
-    Serial.printf("  - '%s'\n", s.c_str());
-    bool dup = false;
-    for (int j = 0; j < visibleCount; j++) if (visible[j] == s) dup = true;
-    if (!dup) visible[visibleCount++] = s;
+  for (int i = 0; i < n; i++) {
+    Serial.printf("  - '%s'\n", String(WiFi.SSID(i)).c_str());
+  }
+
+  // Probar las redes guardadas que aparecen visibles. El escaneo devuelve las
+  // redes ordenadas por señal; por cada red guardada buscamos si esta visible
+  // (revisamos TODAS las visibles, sin cortar en MAX_NETWORKS).
+  // Recopilar primero las redes guardadas que estan visibles (sin conectar
+  // todavia), porque despues de wifiConnectTo() el buffer del escaneo se invalida.
+  int candidates[MAX_NETWORKS];
+  int candCount = 0;
+  for (int i = 0; i < netCount && candCount < MAX_NETWORKS; i++) {
+    if (!networks[i].set) continue;
+    for (int v = 0; v < n; v++) {
+      if (strcmp(networks[i].ssid, String(WiFi.SSID(v)).c_str()) == 0) {
+        candidates[candCount++] = i;
+        break;
+      }
+    }
   }
   WiFi.scanDelete(); // liberar buffer del escaneo
 
-  // Probar primero las redes guardadas que aparecen visibles, por señal.
-  for (int v = 0; v < visibleCount; v++) {
-    for (int i = 0; i < netCount; i++) {
-      if (!networks[i].set) continue;
-      if (strcmp(networks[i].ssid, visible[v].c_str()) == 0) {
-        // Red guardada y visible -> conectar
-        wifiConnectTo(i);
-        unsigned long t0 = millis();
-        while ((long)(millis() - t0) < 8000 && WiFi.status() != WL_CONNECTED) {
-          delay(100);
-          yield();
-        }
-        if (WiFi.status() == WL_CONNECTED) {
-          Serial.printf("[wifi] conectado a '%s'\n", networks[i].ssid);
-          return;
-        }
-      }
+  // Probar cada red guardada visible (el escaneo ya viene ordenado por senal).
+  for (int c = 0; c < candCount; c++) {
+    wifiConnectTo(candidates[c]);
+    unsigned long t0 = millis();
+    while ((long)(millis() - t0) < 8000 && WiFi.status() != WL_CONNECTED) {
+      delay(100);
+      yield();
+    }
+    if (WiFi.status() == WL_CONNECTED) {
+      Serial.printf("[wifi] conectado a '%s'\n", networks[candidates[c]].ssid);
+      return;
     }
   }
 
@@ -672,7 +684,7 @@ void openConfigAP() {
 
 void setup() {
   Serial.begin(115200);
-  Serial.println("\nGarageControl ESP8266 v3.3 iniciando...");
+  Serial.println("\nGarageControl ESP8266 v3.4 iniciando...");
   EEPROM.begin(EEPROM_SIZE);
   loadConfig();
 
