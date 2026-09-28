@@ -23,6 +23,19 @@
  *                             "wifi:<ssid>:<pass>"  (agrega/actualiza una red)
  *                             "obs"                 (imprime toda la config serial)
  *       "garaje/wifi/cmd"   -> "reset"  (borra TODAS las redes)
+ *                     "forget:<ssid>"  (olvida una red)
+ *
+ * v3.2  02/09/2026        Fix reconnect tras apagado/encendido
+ *   - WiFi.persistent(false): evita que el SDK del ESP8266 recuerde el ultimo
+ *     modo (AP/STA) y la ultima red, que provocaba que al encender tras un
+ *     apagon no se conectara a las redes guardadas.
+ *   - tryConnectAny() fuerza modo STA antes del escaneo (si no, en modo AP el
+ *     escaneo no ve redes y jamas conecta).
+ *   - El loop de reconexion NO toca el WiFi mientras el AP de configuracion
+ *     esta activo (antes, cada 8s llamaba tryConnectAny que hacia
+ *     WiFi.mode(WIFI_STA) y apagaba el AP).
+ *   - handleWebSave limpia AP/STA antes de ESP.restart().
+ *   - openConfigAP() desconecta y fuerza modo AP antes de abrir el AP.
  *                              "forget:<ssid>"  (borra una red puntual)
  *   - Boton FLASH (GPIO0) al encender: borra config y abre portal AP.
  * ─────────────────────────────────────────────────────────────
@@ -487,6 +500,14 @@ bool haveNetworks() {
 void tryConnectAny() {
   if (netCount == 0) return;
 
+  // Asegurar modo STA antes de escanear. Si quedamos en modo AP (por ejemplo
+  // tras apagar/encender cuando estaba configurandose), el escaneo no ve redes
+  // y nunca conecta. Desconectamos tambien para limpiar el estado del SDK.
+  WiFi.mode(WIFI_STA);
+  delay(100);
+  WiFi.disconnect();
+  delay(50);
+
   // Escanear las redes visibles para saber cual de las guardadas existe.
   Serial.println("[wifi] escaneando redes visibles...");
   int n = WiFi.scanNetworks();
@@ -573,6 +594,12 @@ void handleWebSave() {
   if (ok) {
     Serial.println("[web] red guardada; reiniciando para conectar");
     delay(800);
+    // Limpiar modo AP/STA y conexion previa antes del restart para que el SDK
+    // no conserve el AP memorizado y arranque limpio en el setup.
+    WiFi.softAPdisconnect(true);
+    WiFi.disconnect();
+    WiFi.mode(WIFI_STA);
+    delay(200);
     ESP.restart();
   }
 }
@@ -586,6 +613,8 @@ void startWebServer() {
 // Abre el punto de acceso de configuracion manualmente.
 void openConfigAP() {
   Serial.println("[wifi] abriendo AP de configuracion");
+  WiFi.disconnect();
+  delay(50);
   WiFi.mode(WIFI_AP);
   WiFi.softAP(AP_NAME, AP_PASS);
   apActive = true;
@@ -597,7 +626,7 @@ void openConfigAP() {
 
 void setup() {
   Serial.begin(115200);
-  Serial.println("\nGarageControl ESP8266 v3.0 iniciando...");
+  Serial.println("\nGarageControl ESP8266 v3.2 iniciando...");
   EEPROM.begin(EEPROM_SIZE);
   loadConfig();
 
@@ -633,6 +662,7 @@ void setup() {
     }
   }
 
+  WiFi.persistent(false);
   WiFi.setAutoReconnect(true);
   WiFi.setSleep(false);
   WiFi.setOutputPower(15);
@@ -684,7 +714,9 @@ void loop() {
   }
 
   // --- WiFi: reconexion no bloqueante ---
-  if (WiFi.status() != WL_CONNECTED && netCount > 0) {
+  // No reintentamos conexion (ni escaneo) mientras el AP de configuracion esta
+  // activo: wifiConnectTo() haria WiFi.mode(WIFI_STA) y apagaria el AP.
+  if (!apActive && WiFi.status() != WL_CONNECTED && netCount > 0) {
     if (wifiLostAt == 0) {
       wifiLostAt = now;
       lastWifiRetry = 0;
