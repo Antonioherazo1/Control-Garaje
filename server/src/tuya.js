@@ -111,6 +111,7 @@ class TuyaClient {
     for (const ep of endpoints) {
       const res = await this._request('GET', ep);
       if (res && res.success && Array.isArray(res.result)) return res.result;
+      console.warn(`[tuya] ${ep} -> success=${res && res.success} code=${res && res.code} msg=${res && res.msg}`);
     }
     return null;
   }
