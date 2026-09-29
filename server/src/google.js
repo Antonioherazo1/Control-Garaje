@@ -13,6 +13,10 @@ const tokens = new Map();
 
 const doorStates = { door1: false, door2: false };
 
+function setDoorState(doorId, open) {
+  if (doorStates[doorId] !== undefined) doorStates[doorId] = !!open;
+}
+
 function reportState(agentUserId, deviceId, states) {
   if (!GOOGLE_API_KEY) return;
   const requestId = crypto.randomBytes(16).toString('hex');
@@ -169,4 +173,4 @@ function refreshAccessToken(refreshToken) {
   return { accessToken, expiresIn: 8 * 3600 };
 }
 
-module.exports = { handleFulfillment, genAuthCode, exchangeCode, refreshAccessToken, CLIENT_ID, CLIENT_SECRET, REDIRECT, reportState, doorStates };
+module.exports = { handleFulfillment, genAuthCode, exchangeCode, refreshAccessToken, CLIENT_ID, CLIENT_SECRET, REDIRECT, reportState, doorStates, setDoorState };

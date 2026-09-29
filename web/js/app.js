@@ -216,11 +216,16 @@ function renderDoors() {
   cont.innerHTML = '';
   allowed.forEach((d) => {
     const st = (state.status && state.status.doorStates[d.id]) || 'unknown';
+    const bat = state.status && state.status.tuya && state.status.tuya.battery
+      ? state.status.tuya.battery[d.id]
+      : null;
     const card = document.createElement('div');
     card.className = 'door';
     card.innerHTML =
       '<h3>' + d.label + '</h3>' +
-      '<p class="muted door-state" data-state="' + st + '">Estado: ' + doorStateLabel(st) + '</p>' +
+      '<p class="muted door-state" data-state="' + st + '">Estado: ' + doorStateLabel(st) +
+      (bat !== null ? ' <span class="bat" title="Bateria del sensor">(' + bat + '%)</span>' : '') +
+      '</p>' +
       '<div class="btn-row">' +
       '  <button class="cmd" data-door="' + d.id + '" data-action="toggle">Accionar</button>' +
       '</div>';

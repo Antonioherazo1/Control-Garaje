@@ -19,4 +19,19 @@ module.exports = {
   },
   dataDir: path.join(ROOT, 'data'),
   publicDir: path.join(ROOT, '..', 'web'),
+  tuya: {
+    enabled: (process.env.TUYA_ENABLED || 'false') === 'true',
+    accessId: process.env.TUYA_ACCESS_ID || '',
+    accessSecret: process.env.TUYA_ACCESS_SECRET || '',
+    baseUrl: process.env.TUYA_BASE_URL || 'https://openapi.tuyaus.com',
+    pollMs: parseInt(process.env.TUYA_POLL_MS || '20000', 10),
+    door1DeviceId: process.env.TUYA_DOOR1_DEVICE_ID || '',
+    door2DeviceId: process.env.TUYA_DOOR2_DEVICE_ID || '',
+    door1Invert: (process.env.TUYA_DOOR1_INVERT || 'false') === 'true',
+    door2Invert: (process.env.TUYA_DOOR2_INVERT || 'false') === 'true',
+    autoCloseMs: {
+      door1: parseInt(process.env.TUYA_AUTOCLOSE_DOOR1_MS || '0', 10),
+      door2: parseInt(process.env.TUYA_AUTOCLOSE_DOOR2_MS || '0', 10),
+    },
+  },
 };

@@ -6,6 +6,7 @@ const auth = require('./auth');
 const perms = require('./permissions');
 const { MqttHub } = require('./mqtt');
 const google = require('./google');
+const { TuyaClient } = require('./tuya');
 
 db.seedAdminIfNeeded();
 
@@ -15,6 +16,60 @@ app.use(express.urlencoded({ extended: false }));
 
 const mqtt = new MqttHub();
 mqtt.start();
+
+const tuya = new TuyaClient({
+  accessId: config.tuya.accessId,
+  accessSecret: config.tuya.accessSecret,
+  baseUrl: config.tuya.baseUrl,
+  pollMs: config.tuya.pollMs,
+  door1DeviceId: config.tuya.door1DeviceId,
+  door2DeviceId: config.tuya.door2DeviceId,
+  door1Invert: config.tuya.door1Invert,
+  door2Invert: config.tuya.door2Invert,
+  autoCloseMs: config.tuya.autoCloseMs,
+});
+
+// El sensor Tuya es la fuente de estado real de las puertas: alimenta tanto el
+// dashboard (mqtt.doorStates) como Google Home (google.doorStates/setDoorState).
+tuya.on('change', ({ state }) => {
+  for (const door of ['door1', 'door2']) {
+    const st = state.doorStates[door];
+    if (st === 'open' || st === 'closed') {
+      mqtt.doorStates[door] = st;
+      google.setDoorState(door, st === 'open');
+      mqtt.emit('change');
+    }
+  }
+});
+
+// Cierre automatico tras dejar la puerta abierta un tiempo preestablecido.
+// Usa las mismas protecciones que los comandos manuales (emergencia/broker/ESP).
+tuya.on('autoclose', ({ door }) => {
+  const ch = DOORS[door] ? DOORS[door].channel : null;
+  if (!ch) return;
+  if (mqtt.emergency) {
+    console.log('[tuya] cierre automatico omitido por emergencia activa');
+    return;
+  }
+  if (!mqtt.connected) {
+    console.log('[tuya] cierre automatico omitido: broker offline');
+    return;
+  }
+  if (!mqtt.deviceOnline) {
+    console.log('[tuya] cierre automatico omitido: dispositivo offline');
+    return;
+  }
+  mqtt.cmdDoor(ch, 'close');
+  db.addHistory({ ts: Date.now(), user: 'auto', door, action: 'close', result: 'ok', reason: 'cierre_automatico' });
+  console.log(`[tuya] comando close enviado a ${door}`);
+});
+
+if (config.tuya.enabled) {
+  tuya.start();
+  console.log('[tuya] cliente iniciado. pollMs:', config.tuya.pollMs);
+} else {
+  console.log('[tuya] deshabilitado (TUYA_ENABLED=false)');
+}
 
 let lastPulseAt = 0;
 
@@ -74,6 +129,7 @@ app.get('/api/status', auth.authRequired, (req, res) => {
     savedNetworks: mqtt.savedNetworks,
     doorStates: mqtt.doorStates,
     emergency: mqtt.emergency,
+    tuya: tuya.status(),
     user: publicUser(u),
   });
 });

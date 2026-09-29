@@ -355,6 +355,11 @@ header {
   color: #93c5fd;
 }
 
+.bat {
+  color: var(--muted);
+  font-size: .8rem;
+}
+
 .btn-row {
   display: flex;
   gap: 12px;
