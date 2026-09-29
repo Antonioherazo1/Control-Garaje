@@ -46,6 +46,8 @@ class TuyaClient {
   }
 
   _sign(method, path, params, bodyStr) {
+    // Las peticiones de token (/v1.0/token) se firman SIN access_token.
+    const isTokenReq = path.includes('/v1.0/token');
     // Content-SHA256 en minusculas del cuerpo (vacio -> hash de string vacio).
     const contentSha = crypto.createHash('sha256').update(bodyStr || '').digest('hex').toLowerCase();
     let url = path;
@@ -56,7 +58,7 @@ class TuyaClient {
     // stringToSign = Metodo\nContent-SHA256\nHeaders\nURL (Headers vacio aqui).
     const stringToSign = `${method}\n${contentSha}\n\n${url}`;
     const t = String(Date.now());
-    const msg = this.accessId + (this.token ? this.token.access_token : '') + t + stringToSign;
+    const msg = this.accessId + (isTokenReq ? '' : (this.token ? this.token.access_token : '')) + t + stringToSign;
     const sign = crypto.createHmac('sha256', this.accessSecret).update(msg).digest('hex').toUpperCase();
     return { sign, t };
   }
