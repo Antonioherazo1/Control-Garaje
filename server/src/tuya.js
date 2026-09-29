@@ -102,33 +102,48 @@ class TuyaClient {
   }
 
   async _getDeviceStatus(deviceId) {
-    // iot-03 es la familia usada por proyectos Smart Home/IoT Core vinculados
-    // con cuentas de usuario. Si no existe, probamos la API de device general.
-    const endpoints = [
+    // El estado real de estos sensores esta en la "thing shadow" (v2). El
+    // endpoint iot-03/status devuelve [] hasta que el disp reporta mediante
+    // eventos, mientras que shadow/properties mantiene el ultimo valor conocido.
+    const eps = [
+      `/v2.0/cloud/thing/${deviceId}/shadow/properties`,
       `/v1.0/iot-03/devices/${deviceId}/status`,
-      `/v1.0/devices/${deviceId}/status`,
     ];
-    for (const ep of endpoints) {
+    for (const ep of eps) {
       const res = await this._request('GET', ep);
-      if (res && res.success && Array.isArray(res.result)) return res.result;
+      if (ep.includes('shadow')) {
+        if (res && res.success && res.result && Array.isArray(res.result.properties)) {
+          return res.result.properties;
+        }
+      } else if (res && res.success && Array.isArray(res.result)) {
+        return res.result;
+      }
       console.warn(`[tuya] ${ep} -> success=${res && res.success} code=${res && res.code} msg=${res && res.msg}`);
     }
     return null;
   }
 
   // Convierte el array de DP del sensor a estado 'open'/'closed'. Maneja el
-  // codigo 'contact' (bool), 'contact_state'/'doorcontact_state' (enum) y
-  // claves invertidas segun el fabricante.
+  // codigo 'contact'/'doorcontact_state' (bool) y enum 'open'/'closed'.
+  // Convention de estos sensores: doorcontact_state true normalmente = cerrada.
+  // Con `invert` se da vuelta si el fabricante lo reporta al reves.
   _mapContact(entries, invert) {
     if (!Array.isArray(entries)) return null;
     const contact = entries.find((e) => e && e.code && /contact/.test(e.code));
     if (!contact) return null;
     const v = contact.value;
     let open;
-    if (v === 'open' || v === 'closed') open = v === 'open';
-    else if (typeof v === 'string') open = v === '1' || v.toLowerCase() === 'true';
-    else open = !!v;
-    if (invert) open = !open;
+    if (v === 'open' || v === 'closed') {
+      open = v === 'open';
+    } else if (typeof v === 'boolean') {
+      // true = cerrada (o abierta si invert).
+      open = invert ? v : !v;
+    } else if (typeof v === 'string') {
+      const t = v === '1' || v.toLowerCase() === 'true';
+      open = invert ? t : !t;
+    } else {
+      open = invert ? !!v : !v;
+    }
     return open ? 'open' : 'closed';
   }
 
@@ -136,8 +151,13 @@ class TuyaClient {
     if (!Array.isArray(entries)) return null;
     const b = entries.find((e) => e && e.code && /battery/.test(e.code));
     if (!b) return null;
-    const v = typeof b.value === 'number' ? b.value : parseInt(b.value, 10);
-    return Number.isFinite(v) ? v : null;
+    const v = b.value;
+    if (typeof v === 'number') return Number.isFinite(v) ? v : null;
+    if (v === 'high') return 90;
+    if (v === 'middle' || v === 'mid') return 50;
+    if (v === 'low') return 15;
+    const n = parseInt(v, 10);
+    return Number.isFinite(n) ? n : null;
   }
 
   async _pollOnce() {
