@@ -80,6 +80,14 @@
             <button id="btn-test" class="ghost">Probar ahora</button>
           </div>
           <hr class="panel-sep">
+          <h3>Cierre automatico por sensor</h3>
+          <p class="muted">Tiempo que la puerta debe estar abierta antes de que el sistema la cierre sola. Poner 0 desactiva el cierre automatico.</p>
+          <form id="autoclose-form" class="row-form">
+            <input id="autoclose-min" type="number" min="0" max="720" step="0.5" placeholder="Minutos" required>
+            <button type="submit" class="primary">Guardar tiempo</button>
+          </form>
+          <p id="autoclose-status" class="muted"></p>
+          <hr class="panel-sep">
           <h3>Redes WiFi</h3>
           <p class="muted">El ESP8266 guarda <b>hasta 5 redes</b> en su memoria y se conecta a la primera disponible. Aqui puedes agregar, olvidar o borrar redes.</p>
           <form id="wifi-form" class="row-form">

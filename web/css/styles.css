@@ -360,6 +360,14 @@ header {
   font-size: .8rem;
 }
 
+.door-timer {
+  margin: -10px 0 14px;
+  font-size: .9rem;
+  font-weight: 600;
+  color: #fbbf24;
+  font-variant-numeric: tabular-nums;
+}
+
 .btn-row {
   display: flex;
   gap: 12px;

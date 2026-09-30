@@ -29,6 +29,17 @@ const tuya = new TuyaClient({
   autoCloseMs: config.tuya.autoCloseMs,
 });
 
+// Los tiempos de cierre automatico editables desde el panel se persisten en
+// data/tuya-config.json y tienen prioridad sobre los valores de .env.
+const persisted = db.getTuyaConfig();
+if (persisted && persisted.autoCloseMs) {
+  for (const door of ['door1', 'door2']) {
+    if (typeof persisted.autoCloseMs[door] === 'number') {
+      tuya.setAutoCloseMs(door, persisted.autoCloseMs[door]);
+    }
+  }
+}
+
 // El sensor Tuya es la fuente de estado real de las puertas: alimenta tanto el
 // dashboard (mqtt.doorStates) como Google Home (google.doorStates/setDoorState).
 tuya.on('change', ({ state }) => {
@@ -243,6 +254,33 @@ app.post('/api/wifi/forget', auth.authRequired, auth.adminRequired, (req, res) =
   mqtt.setup('forget:' + ssid);
   db.addHistory({ ts: Date.now(), user: u.id, door: null, action: 'wifi_forget', result: 'ok', wifi: ssid });
   res.json({ ok: true, message: 'Red olvidada.' });
+});
+
+// Configuracion del cierre automatico por sensor Tuya (panel de Prueba).
+// Los tiempos viajan en minutos y se guardan en milisegundos.
+app.get('/api/tuya/config', auth.authRequired, auth.adminRequired, (req, res) => {
+  const cfg = tuya.status();
+  res.json({
+    enabled: cfg.enabled,
+    pollMs: cfg.pollMs,
+    autoClose: {
+      door1: Math.round((tuya.autoCloseMs.door1 || 0) / 60000),
+      door2: Math.round((tuya.autoCloseMs.door2 || 0) / 60000),
+    },
+  });
+});
+
+app.put('/api/tuya/config', auth.authRequired, auth.adminRequired, (req, res) => {
+  const { minutes } = req.body || {};
+  if (typeof minutes !== 'number' || !Number.isFinite(minutes) || minutes < 0 || minutes > 720) {
+    return res.status(400).json({ error: 'tiempo_invalido' });
+  }
+  const ms = Math.round(minutes * 60000);
+  tuya.setAutoCloseMs('door1', ms);
+  db.setTuyaConfig({ autoCloseMs: { door1: ms, door2: tuya.autoCloseMs.door2 || 0 } });
+  db.addHistory({ ts: Date.now(), user: req.userId, door: null, action: 'auto_close_config', result: 'ok', minutes });
+  console.log(`[api] auto-close door1 actualizado a ${minutes} min (${ms}ms)`);
+  res.json({ ok: true, autoClose: { door1: minutes, door2: Math.round((tuya.autoCloseMs.door2 || 0) / 60000) } });
 });
 
 app.post('/api/emergency', auth.authRequired, (req, res) => {

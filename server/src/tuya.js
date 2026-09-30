@@ -33,8 +33,16 @@ class TuyaClient {
     this._handlers = {};
     // Cada puerta con sensor recuerda desde cuando esta abierta y si ya se
     // disparo el cierre para la apertura en curso.
-    this._openSince = { door1: 0, door2: 0 };
+    this.openSince = { door1: 0, door2: 0 };
     this._closeSent = { door1: false, door2: false };
+  }
+
+  setAutoCloseMs(door, ms) {
+    const v = Math.max(0, parseInt(ms, 10) || 0);
+    this.autoCloseMs[door] = v;
+    // No resetear timers si ya hay una apertura en curso: el nuevo tiempo se
+    // aplica a partir de ahora.
+    console.log(`[tuya] auto-close ${door} = ${v}ms`);
   }
 
   on(event, cb) {
@@ -181,7 +189,18 @@ class TuyaClient {
         anyOk = true;
         const st = this._mapContact(entries, d.invert);
         const bat = this._mapBattery(entries);
-        if (st) this.doorStates[d.key] = st;
+        if (st) {
+          if (st === 'open' && this.doorStates[d.key] !== 'open' && !this.openSince[d.key]) {
+            // Registra el momento en que la puerta quedo abierta (para el
+            // temporizador y el auto-cierre).
+            this.openSince[d.key] = Date.now();
+            this._closeSent[d.key] = false;
+          } else if (st === 'closed') {
+            this.openSince[d.key] = 0;
+            this._closeSent[d.key] = false;
+          }
+          this.doorStates[d.key] = st;
+        }
         if (bat !== null) this.battery[d.key] = bat;
         console.log(`[tuya] ${d.key} estado=${st || '?"'} battery=${bat} raw=${JSON.stringify(entries)?.substring(0, 200)}`);
         this._checkAutoClose(d, st);
@@ -201,14 +220,12 @@ class TuyaClient {
     const limit = this.autoCloseMs[d.key];
     if (!limit || !d.deviceId) return;
     if (st === 'open') {
-      if (!this._openSince[d.key]) this._openSince[d.key] = Date.now();
-      if (Date.now() - this._openSince[d.key] >= limit && !this._closeSent[d.key]) {
+      if (Date.now() - this.openSince[d.key] >= limit && !this._closeSent[d.key]) {
         this._closeSent[d.key] = true;
         console.log(`[tuya] ${d.key} abierta ${limit}ms; disparando cierre automatico`);
         this.emit('autoclose', { door: d.key });
       }
     } else if (st === 'closed') {
-      this._openSince[d.key] = 0;
       this._closeSent[d.key] = false;
     }
   }
@@ -230,6 +247,9 @@ class TuyaClient {
       online: this.online,
       doorStates: this.doorStates,
       battery: this.battery,
+      openSince: this.openSince,
+      autoCloseMs: this.autoCloseMs,
+      pollMs: this.pollMs,
       lastPollAt: this.lastPollAt,
       lastError: this.lastError,
     };

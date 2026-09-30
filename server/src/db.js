@@ -26,6 +26,7 @@ const users = readJSON(path.join(config.dataDir, 'users.json'), []);
 let history = readJSON(path.join(config.dataDir, 'history.json'), []);
 const usage = readJSON(path.join(config.dataDir, 'usage.json'), {});
 let voiceTokens = readJSON(path.join(config.dataDir, 'voice-tokens.json'), []);
+let tuyaConfig = readJSON(path.join(config.dataDir, 'tuya-config.json'), null);
 
 function saveUsers() {
   writeJSON(path.join(config.dataDir, 'users.json'), users);
@@ -41,6 +42,20 @@ function saveUsage() {
 
 function saveVoiceTokens() {
   writeJSON(path.join(config.dataDir, 'voice-tokens.json'), voiceTokens);
+}
+
+function saveTuyaConfig() {
+  writeJSON(path.join(config.dataDir, 'tuya-config.json'), tuyaConfig);
+}
+
+function getTuyaConfig() {
+  return tuyaConfig;
+}
+
+function setTuyaConfig(patch) {
+  tuyaConfig = { ...(tuyaConfig || {}), ...patch };
+  saveTuyaConfig();
+  return tuyaConfig;
 }
 
 function getVoiceToken(id) {
@@ -175,4 +190,6 @@ module.exports = {
   getVoiceTokens,
   addVoiceToken,
   deleteVoiceToken,
+  getTuyaConfig,
+  setTuyaConfig,
 };

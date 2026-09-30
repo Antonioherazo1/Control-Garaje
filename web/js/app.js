@@ -136,6 +136,7 @@ function switchView(name) {
   if (name === 'historial') loadHistory();
   if (name === 'users') loadUsers();
   if (name === 'voice') loadVoiceTokens();
+  if (name === 'test') loadAutoCloseConfig();
 }
 
 /* ---------------- WiFi Icon ---------------- */
@@ -219,6 +220,9 @@ function renderDoors() {
     const bat = state.status && state.status.tuya && state.status.tuya.battery
       ? state.status.tuya.battery[d.id]
       : null;
+    const openSince = state.status && state.status.tuya && state.status.tuya.openSince
+      ? state.status.tuya.openSince[d.id]
+      : 0;
     const card = document.createElement('div');
     card.className = 'door';
     card.innerHTML =
@@ -226,6 +230,7 @@ function renderDoors() {
       '<p class="muted door-state" data-state="' + st + '">Estado: ' + doorStateLabel(st) +
       (bat !== null ? ' <span class="bat" title="Bateria del sensor">(' + bat + '%)</span>' : '') +
       '</p>' +
+      (st === 'open' && openSince ? '<p class="door-timer" data-since="' + openSince + '">Abierta hace 0s</p>' : '') +
       '<div class="btn-row">' +
       '  <button class="cmd" data-door="' + d.id + '" data-action="toggle">Accionar</button>' +
       '</div>';
@@ -263,6 +268,68 @@ async function onCommand(e) {
     setTimeout(() => { btn.disabled = false; }, 600);
   }
 }
+
+/* ---------------- Cierre automatico (Prueba) ---------------- */
+
+async function loadAutoCloseConfig() {
+  const form = $('autoclose-form');
+  const status = $('autoclose-status');
+  if (!form) return;
+  try {
+    const cfg = await api('/tuya/config');
+    if (!cfg.enabled) {
+      status.textContent = 'Sensor Tuya no configurado.';
+      form.style.display = 'none';
+      return;
+    }
+    form.style.display = '';
+    $('autoclose-min').value = String(cfg.autoClose.door1);
+    status.textContent = 'Tiempo actual: ' + cfg.autoClose.door1 + ' min';
+  } catch (err) {
+    status.textContent = tr(err.message);
+  }
+}
+
+$('autoclose-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = e.currentTarget.querySelector('button');
+  const status = $('autoclose-status');
+  const minutes = parseFloat($('autoclose-min').value);
+  btn.disabled = true;
+  try {
+    const data = await api('/tuya/config', {
+      method: 'PUT',
+      body: JSON.stringify({ minutes }),
+    });
+    status.textContent = 'Guardado: ' + data.autoClose.door1 + ' min';
+    alert('Cierre automatico actualizado a ' + data.autoClose.door1 + ' min.');
+  } catch (err) {
+    status.textContent = tr(err.message);
+    alert(tr(err.message));
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+/* ---------------- Temporizador de apertura ---------------- */
+
+function fmtElapsed(ms) {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  const pad = (n) => String(n).padStart(2, '0');
+  if (h > 0) return h + ':' + pad(m) + ':' + pad(sec);
+  return m + ':' + pad(sec);
+}
+
+setInterval(() => {
+  document.querySelectorAll('.door-timer').forEach((el) => {
+    const since = parseInt(el.dataset.since, 10);
+    if (!since) { el.remove(); return; }
+    el.textContent = 'Abierta hace ' + fmtElapsed(Date.now() - since);
+  });
+}, 1000);
 
 /* ---------------- Prueba del dispositivo ---------------- */
 
