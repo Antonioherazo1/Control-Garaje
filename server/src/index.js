@@ -120,6 +120,9 @@ app.post('/api/login', (req, res) => {
     db.addHistory({ ts: Date.now(), user: u.id, door: null, action: 'login', result: 'denied', reason: 'pin_expirado' });
     return res.status(403).json({ error: 'pin_expirado' });
   }
+  if (typeof u.tokenVersion !== 'number') {
+    db.updateUser(u.id, { tokenVersion: 0 });
+  }
   db.addHistory({ ts: Date.now(), user: u.id, door: null, action: 'login', result: 'ok' });
   res.json({ token: auth.signToken(u), user: publicUser(u) });
 });
@@ -327,6 +330,9 @@ app.post('/api/users', auth.authRequired, auth.adminRequired, (req, res) => {
     const { salt, hash } = auth.hashPin(pin);
     user.salt = salt;
     user.pinHash = hash;
+    user.tokenVersion = 0;
+  } else {
+    user.tokenVersion = 0;
   }
   db.addUser(user);
   res.json({ user: publicUser(user) });
@@ -346,6 +352,8 @@ app.put('/api/users/:id', auth.authRequired, auth.adminRequired, (req, res) => {
     const { salt, hash } = auth.hashPin(pin);
     patch.salt = salt;
     patch.pinHash = hash;
+    const cur = db.getUser(u.id);
+    patch.tokenVersion = typeof cur && typeof cur.tokenVersion === 'number' ? cur.tokenVersion + 1 : 1;
   }
   const saved = db.updateUser(u.id, patch);
   res.json({ user: publicUser(saved) });
@@ -372,6 +380,7 @@ app.post('/api/temp-pin', auth.authRequired, auth.adminRequired, (req, res) => {
     schedule: { start: '00:00', end: '23:59' },
     dailyLimit: Math.max(1, parseInt(dailyLimit || '5', 10) || 5),
     expiresAt: Date.now() + h * 3600 * 1000,
+    tokenVersion: 0,
   };
   db.addUser(user);
   res.json({ pin, user: publicUser(user) });

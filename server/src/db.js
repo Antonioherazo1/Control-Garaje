@@ -167,10 +167,24 @@ function seedAdminIfNeeded() {
     schedule: { start: '00:00', end: '23:59' },
     dailyLimit: 0,
     expiresAt: null,
+    tokenVersion: 0,
   });
   saveUsers();
   console.warn(`[db] Usuario admin creado con PIN inicial "${pin}". CAMBIALO cuanto antes.`);
 }
+
+function migrate() {
+  let changed = false;
+  for (const u of users) {
+    if (typeof u.tokenVersion !== 'number') {
+      u.tokenVersion = 0;
+      changed = true;
+    }
+  }
+  if (changed) saveUsers();
+}
+
+migrate();
 
 module.exports = {
   users,

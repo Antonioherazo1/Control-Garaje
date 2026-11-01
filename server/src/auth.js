@@ -18,7 +18,8 @@ function verifyPin(pin, salt, hash) {
 }
 
 function signToken(user) {
-  return jwt.sign({ id: user.id, role: user.role }, config.jwtSecret, {
+  const v = typeof user.tokenVersion === 'number' ? user.tokenVersion : 0;
+  return jwt.sign({ id: user.id, role: user.role, v }, config.jwtSecret, {
     expiresIn: config.jwtExpires,
   });
 }
@@ -31,6 +32,19 @@ function authRequired(req, res, next) {
   }
   try {
     const payload = jwt.verify(token, config.jwtSecret);
+    const db = require('./db');
+    const u = db.getUser(payload.id);
+    if (!u) {
+      return res.status(401).json({ error: 'token_invalido' });
+    }
+    const tv = typeof u.tokenVersion === 'number' ? u.tokenVersion : 0;
+    if (typeof payload.v !== 'number') {
+      return res.status(401).json({ error: 'token_invalido' });
+    }
+    const pv = payload.v;
+    if (tv !== pv) {
+      return res.status(401).json({ error: 'token_invalido' });
+    }
     req.userId = payload.id;
     req.userRole = payload.role;
     next();
