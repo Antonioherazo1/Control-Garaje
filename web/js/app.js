@@ -89,7 +89,14 @@ function logout() {
   localStorage.removeItem('token');
   if (state.poll) clearInterval(state.poll);
   state.poll = null;
+  const lu = $('login-user');
+  const lp = $('login-pin');
+  const le = $('login-error');
+  if (lu) lu.value = '';
+  if (lp) lp.value = '';
+  if (le) le.textContent = '';
   showView('login');
+  if (lu) setTimeout(() => lu.focus(), 50);
 }
 
 $('btn-logout').addEventListener('click', logout);
@@ -620,7 +627,14 @@ if ('serviceWorker' in navigator) {
 
 (async function init() {
   if (!state.token) {
+    const lu = $('login-user');
+    const lp = $('login-pin');
+    const le = $('login-error');
+    if (lu) lu.value = '';
+    if (lp) lp.value = '';
+    if (le) le.textContent = '';
     showView('login');
+    if (lu) setTimeout(() => lu.focus(), 50);
     return;
   }
   try {
@@ -628,6 +642,13 @@ if ('serviceWorker' in navigator) {
     state.user = data.user;
     enterApp();
   } catch {
+    const lu = $('login-user');
+    const lp = $('login-pin');
+    const le = $('login-error');
+    if (lu) lu.value = '';
+    if (lp) lp.value = '';
+    if (le) le.textContent = '';
     showView('login');
+    if (lu) setTimeout(() => lu.focus(), 50);
   }
 })();
