@@ -13,6 +13,7 @@ const $ = (id) => document.getElementById(id);
 const MSG = {
   credenciales_invalidas: 'Usuario o PIN incorrecto',
   pin_expirado: 'El PIN ha expirado',
+  clave_ya_usada: 'Este código ya fue usado. Pídele uno nuevo al administrador.',
   puerta_no_permitida: 'No tienes permiso para esta puerta',
   fuera_de_horario: 'Fuera del horario permitido',
   limite_diario: 'Limite diario de usos alcanzado',

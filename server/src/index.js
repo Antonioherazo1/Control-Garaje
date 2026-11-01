@@ -120,8 +120,15 @@ app.post('/api/login', (req, res) => {
     db.addHistory({ ts: Date.now(), user: u.id, door: null, action: 'login', result: 'denied', reason: 'pin_expirado' });
     return res.status(403).json({ error: 'pin_expirado' });
   }
+  if (u.expiresAt && u.used) {
+    db.addHistory({ ts: Date.now(), user: u.id, door: null, action: 'login', result: 'denied', reason: 'clave_ya_usada' });
+    return res.status(403).json({ error: 'clave_ya_usada' });
+  }
   if (typeof u.tokenVersion !== 'number') {
     db.updateUser(u.id, { tokenVersion: 0 });
+  }
+  if (u.expiresAt && !u.used) {
+    db.updateUser(u.id, { used: true, usedAt: Date.now(), pinHash: null, salt: null });
   }
   db.addHistory({ ts: Date.now(), user: u.id, door: null, action: 'login', result: 'ok' });
   res.json({ token: auth.signToken(u), user: publicUser(u) });
@@ -381,6 +388,7 @@ app.post('/api/temp-pin', auth.authRequired, auth.adminRequired, (req, res) => {
     dailyLimit: Math.max(1, parseInt(dailyLimit || '5', 10) || 5),
     expiresAt: Date.now() + h * 3600 * 1000,
     tokenVersion: 0,
+    used: false,
   };
   db.addUser(user);
   res.json({ pin, user: publicUser(user) });
