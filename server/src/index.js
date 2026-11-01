@@ -366,10 +366,26 @@ app.put('/api/users/:id', auth.authRequired, auth.adminRequired, (req, res) => {
   res.json({ user: publicUser(saved) });
 });
 
-app.delete('/api/users/:id', auth.authRequired, auth.adminRequired, (req, res) => {
-  if (String(req.params.id) === 'admin') return res.status(400).json({ error: 'no_eliminar_admin' });
-  if (!db.deleteUser(req.params.id)) return res.status(404).json({ error: 'no_encontrado' });
-  res.json({ ok: true });
+app.post('/api/users/:id/new-pin', auth.authRequired, auth.adminRequired, (req, res) => {
+  const u = db.getUser(req.params.id);
+  if (!u) return res.status(404).json({ error: 'no_encontrado' });
+  if (u.id === 'admin') return res.status(400).json({ error: 'no_permitido' });
+  const pin = String(Math.floor(100000 + Math.random() * 900000));
+  const { salt, hash } = auth.hashPin(pin);
+  const patch = {
+    salt,
+    pinHash: hash,
+    tokenVersion: typeof u.tokenVersion === 'number' ? u.tokenVersion + 1 : 1,
+  };
+  if (u.expiresAt) {
+    patch.used = false;
+    patch.expiresAt = Date.now() + 24 * 3600 * 1000;
+    patch.pinHash = hash;
+    patch.salt = salt;
+  }
+  const saved = db.updateUser(u.id, patch);
+  db.addHistory({ ts: Date.now(), user: req.userId, door: null, action: 'new_pin', result: 'ok', target: u.id });
+  res.json({ pin, user: publicUser(saved) });
 });
 
 app.post('/api/temp-pin', auth.authRequired, auth.adminRequired, (req, res) => {

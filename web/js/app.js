@@ -468,10 +468,13 @@ function renderUsers(users) {
     const del = u.id !== 'admin'
       ? '<button class="mini-danger" data-del="' + escapeAttr(u.id) + '">Eliminar</button>'
       : '';
+    const newpin = u.id !== 'admin'
+      ? '<button class="ghost small" data-newpin="' + escapeAttr(u.id) + '" data-name="' + escapeAttr(u.name) + '">Generar PIN nuevo</button>'
+      : '';
     item.innerHTML =
       '<div><strong>' + escapeHtml(u.name) + '</strong>' +
       '<div class="meta">' + escapeHtml(u.id) + ' · ' + escapeHtml(doors) + ' · ' + escapeHtml(sched) + ' · ' + escapeHtml(limit) + extra + '</div></div>' +
-      '<div>' + del + '</div>';
+      '<div style="display:flex;gap:8px;flex-wrap:wrap">' + newpin + del + '</div>';
     el.appendChild(item);
   });
   el.querySelectorAll('[data-del]').forEach((btn) => {
@@ -479,6 +482,18 @@ function renderUsers(users) {
       if (!confirm('¿Eliminar al usuario?')) return;
       try {
         await api('/users/' + encodeURIComponent(btn.dataset.del), { method: 'DELETE' });
+        loadUsers();
+      } catch (err) {
+        alert(tr(err.message));
+      }
+    });
+  });
+  el.querySelectorAll('[data-newpin]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('¿Generar un PIN nuevo para ' + (btn.dataset.name || btn.dataset.newpin) + '?\nSe cerrará la sesión si está conectado y el PIN anterior dejará de funcionar.')) return;
+      try {
+        const data = await api('/users/' + encodeURIComponent(btn.dataset.newpin) + '/new-pin', { method: 'POST' });
+        prompt('Copia este PIN y dáselo (solo se muestra una vez):', data.pin);
         loadUsers();
       } catch (err) {
         alert(tr(err.message));
