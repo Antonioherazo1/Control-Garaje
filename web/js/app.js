@@ -153,7 +153,6 @@ function switchView(name) {
   });
   if (name === 'historial') loadHistory();
   if (name === 'users') loadUsers();
-  if (name === 'voice') loadVoiceTokens();
   if (name === 'test') loadAutoCloseConfig();
 }
 
