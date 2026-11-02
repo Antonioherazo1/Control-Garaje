@@ -19,9 +19,8 @@ function verifyPin(pin, salt, hash) {
 
 function signToken(user) {
   const v = typeof user.tokenVersion === 'number' ? user.tokenVersion : 0;
-  return jwt.sign({ id: user.id, role: user.role, v }, config.jwtSecret, {
-    expiresIn: config.jwtExpires,
-  });
+  // La sesion no caduca: solo se invalida al salir o al generar un PIN nuevo.
+  return jwt.sign({ id: user.id, role: user.role, v }, config.jwtSecret);
 }
 
 function authRequired(req, res, next) {

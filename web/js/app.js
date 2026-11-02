@@ -84,7 +84,17 @@ $('login-form').addEventListener('submit', async (e) => {
   }
 });
 
-function logout() {
+async function logout(notifyServer = false) {
+  if (notifyServer && state.token) {
+    try {
+      await fetch(API + '/logout', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + state.token },
+      });
+    } catch {
+      // Aun sin conexion se limpia la sesion local.
+    }
+  }
   state.token = null;
   state.user = null;
   localStorage.removeItem('token');
@@ -100,7 +110,7 @@ function logout() {
   if (lu) setTimeout(() => lu.focus(), 50);
 }
 
-$('btn-logout').addEventListener('click', logout);
+$('btn-logout').addEventListener('click', () => logout(true));
 
 /* ---------------- Entrada a la app ---------------- */
 

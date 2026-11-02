@@ -105,7 +105,15 @@ function publicUser(u) {
 app.post('/api/login', (req, res) => {
   const { user, pin } = req.body || {};
   const u = db.getUserByName(user);
-  if (!u || !u.pinHash || !auth.verifyPin(pin, u.salt, u.pinHash)) {
+  if (!u) {
+    db.addHistory({ ts: Date.now(), user: String(user || '?'), door: null, action: 'login', result: 'denied', reason: 'usuario_inexistente' });
+    return res.status(401).json({ error: 'credenciales_invalidas' });
+  }
+  if (u.role !== 'admin' && u.used) {
+    db.addHistory({ ts: Date.now(), user: u.id, door: null, action: 'login', result: 'denied', reason: 'clave_ya_usada' });
+    return res.status(403).json({ error: 'clave_ya_usada' });
+  }
+  if (!u.pinHash || !u.salt || !auth.verifyPin(pin, u.salt, u.pinHash)) {
     db.addHistory({
       ts: Date.now(),
       user: String(user || '?'),
@@ -120,18 +128,29 @@ app.post('/api/login', (req, res) => {
     db.addHistory({ ts: Date.now(), user: u.id, door: null, action: 'login', result: 'denied', reason: 'pin_expirado' });
     return res.status(403).json({ error: 'pin_expirado' });
   }
-  if (u.expiresAt && u.used) {
-    db.addHistory({ ts: Date.now(), user: u.id, door: null, action: 'login', result: 'denied', reason: 'clave_ya_usada' });
-    return res.status(403).json({ error: 'clave_ya_usada' });
-  }
-  if (typeof u.tokenVersion !== 'number') {
+  // Todo PIN de usuario es de un solo uso. El admin conserva su PIN permanente.
+  if (u.role !== 'admin') {
+    db.updateUser(u.id, {
+      used: true,
+      usedAt: Date.now(),
+      pinHash: null,
+      salt: null,
+      tokenVersion: typeof u.tokenVersion === 'number' ? u.tokenVersion : 0,
+    });
+  } else if (typeof u.tokenVersion !== 'number') {
     db.updateUser(u.id, { tokenVersion: 0 });
-  }
-  if (u.expiresAt && !u.used) {
-    db.updateUser(u.id, { used: true, usedAt: Date.now(), pinHash: null, salt: null });
   }
   db.addHistory({ ts: Date.now(), user: u.id, door: null, action: 'login', result: 'ok' });
   res.json({ token: auth.signToken(u), user: publicUser(u) });
+});
+
+app.post('/api/logout', auth.authRequired, (req, res) => {
+  const u = db.getUser(req.userId);
+  if (!u) return res.status(401).json({ error: 'usuario_no_existe' });
+  const tokenVersion = (typeof u.tokenVersion === 'number' ? u.tokenVersion : 0) + 1;
+  db.updateUser(u.id, { tokenVersion });
+  db.addHistory({ ts: Date.now(), user: u.id, door: null, action: 'logout', result: 'ok' });
+  res.json({ ok: true });
 });
 
 app.get('/api/me', auth.authRequired, (req, res) => {
@@ -332,6 +351,7 @@ app.post('/api/users', auth.authRequired, auth.adminRequired, (req, res) => {
     schedule: schedule && schedule.start && schedule.end ? schedule : { start: '00:00', end: '23:59' },
     dailyLimit: Math.max(0, parseInt(dailyLimit || '0', 10) || 0),
     expiresAt: null,
+    used: false,
   };
   if (pin) {
     const { salt, hash } = auth.hashPin(pin);
@@ -361,6 +381,7 @@ app.put('/api/users/:id', auth.authRequired, auth.adminRequired, (req, res) => {
     patch.pinHash = hash;
     const cur = db.getUser(u.id);
     patch.tokenVersion = typeof cur && typeof cur.tokenVersion === 'number' ? cur.tokenVersion + 1 : 1;
+    patch.used = false;
   }
   const saved = db.updateUser(u.id, patch);
   res.json({ user: publicUser(saved) });
@@ -375,13 +396,11 @@ app.post('/api/users/:id/new-pin', auth.authRequired, auth.adminRequired, (req, 
   const patch = {
     salt,
     pinHash: hash,
+    used: false,
     tokenVersion: typeof u.tokenVersion === 'number' ? u.tokenVersion + 1 : 1,
   };
   if (u.expiresAt) {
-    patch.used = false;
     patch.expiresAt = Date.now() + 24 * 3600 * 1000;
-    patch.pinHash = hash;
-    patch.salt = salt;
   }
   const saved = db.updateUser(u.id, patch);
   db.addHistory({ ts: Date.now(), user: req.userId, door: null, action: 'new_pin', result: 'ok', target: u.id });
