@@ -405,7 +405,6 @@ app.post('/api/users/:id/new-pin', auth.authRequired, auth.adminRequired, (req, 
     salt,
     pinHash: hash,
     used: false,
-    tokenVersion: typeof u.tokenVersion === 'number' ? u.tokenVersion + 1 : 1,
   };
   if (u.expiresAt) {
     patch.expiresAt = Date.now() + 24 * 3600 * 1000;
