@@ -37,7 +37,7 @@
  *   - handleWebSave limpia AP/STA antes de ESP.restart().
  *     el AP al abrir el AP.
  *
- * v3.3  02/09/2026        Reintento con AP abierto
+ * v3.3  28/09/2026        Reintento con AP abierto
  *   - Con el AP de configuracion activo, cada 20s escanea buscando una red
  *     guardada disponible (ej. una red 2.4GHz que reaparece). Si la encuentra,
  *     cierra el AP y se conecta; si falla, reabre el AP.
@@ -45,7 +45,7 @@
  *     tanto en 2.4GHz como en 5GHz: cuando la banda 2.4GHz esta activa, el ESP
  *     conecta solo sin necesidad de reconfigurar.
  *
- * v3.4  02/09/2026        Fix lista de redes visibles truncada
+ * v3.4  28/09/2026        Fix lista de redes visibles truncada
  *   - tryConnectAny() cortaba la lista de redes visibles en MAX_NETWORKS (5)
  *     unicas. Con mas de 5 redes en el aire (ej. 10-14), 'Familia Herazo 5G'
  *     quedaba fuera y jamas se comparaba con las guardadas.

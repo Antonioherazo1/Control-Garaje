@@ -109,7 +109,7 @@ app.post('/api/login', (req, res) => {
     db.addHistory({ ts: Date.now(), user: String(user || '?'), door: null, action: 'login', result: 'denied', reason: 'usuario_inexistente' });
     return res.status(401).json({ error: 'credenciales_invalidas' });
   }
-  if (u.expiresAt && u.used) {
+  if (u.role !== 'admin' && u.used) {
     db.addHistory({ ts: Date.now(), user: u.id, door: null, action: 'login', result: 'denied', reason: 'clave_ya_usada' });
     return res.status(403).json({ error: 'clave_ya_usada' });
   }
@@ -128,18 +128,16 @@ app.post('/api/login', (req, res) => {
     db.addHistory({ ts: Date.now(), user: u.id, door: null, action: 'login', result: 'denied', reason: 'pin_expirado' });
     return res.status(403).json({ error: 'pin_expirado' });
   }
-  // Solo los PIN temporales (con expiracion) son de un solo uso.
-  if (u.expiresAt && !u.used) {
+  // Todo PIN de usuario es de un solo uso. El admin conserva su PIN permanente.
+  if (u.role !== 'admin' && !u.used) {
     db.updateUser(u.id, {
       used: true,
       usedAt: Date.now(),
       pinHash: null,
       salt: null,
-      tokenVersion: typeof u.tokenVersion === 'number' ? u.tokenVersion + 1 : 1,
     });
-    // Refrescar tokenVersion para firmar correctamente
-    u.tokenVersion = typeof u.tokenVersion === 'number' ? u.tokenVersion + 1 : 1;
-  } else if (typeof u.tokenVersion !== 'number') {
+  }
+  if (typeof u.tokenVersion !== 'number') {
     db.updateUser(u.id, { tokenVersion: 0 });
     u.tokenVersion = 0;
   }
