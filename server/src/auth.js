@@ -37,12 +37,15 @@ function authRequired(req, res, next) {
       return res.status(401).json({ error: 'token_invalido' });
     }
     const tv = typeof u.tokenVersion === 'number' ? u.tokenVersion : 0;
-    if (typeof payload.v !== 'number') {
-      return res.status(401).json({ error: 'token_invalido' });
-    }
-    const pv = payload.v;
-    if (tv !== pv) {
-      return res.status(401).json({ error: 'token_invalido' });
+    if (typeof payload.v === 'number') {
+      if (payload.v !== tv) {
+        return res.status(401).json({ error: 'token_invalido' });
+      }
+    } else {
+      // Tokens antiguos sin version: aceptar solo si el usuario tiene version 0
+      if (tv !== 0) {
+        return res.status(401).json({ error: 'token_invalido' });
+      }
     }
     req.userId = payload.id;
     req.userRole = payload.role;
